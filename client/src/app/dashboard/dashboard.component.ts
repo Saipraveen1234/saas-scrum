@@ -1,0 +1,288 @@
+import { Component, OnInit, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { StandupService, Standup } from '../standup.service';
+
+@Component({
+  selector: 'app-dashboard',
+  standalone: true,
+  imports: [CommonModule, RouterLink, FormsModule],
+  template: `
+    <div class="max-w-7xl mx-auto space-y-6">
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Total Updates -->
+        <div class="bg-white rounded-lg border border-slate-200 p-6 hover:shadow-md transition-shadow">
+          <div class="flex items-center justify-between mb-4">
+            <div class="text-slate-500 text-sm font-medium uppercase tracking-wide">Total Updates</div>
+            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <div class="text-3xl font-semibold text-slate-900">{{ todayStats.totalUpdates }}</div>
+          <div class="text-xs text-slate-500 mt-1">{{ selectedDate | date : 'mediumDate' }}</div>
+        </div>
+
+        <!-- Team Members -->
+        <div class="bg-white rounded-lg border border-slate-200 p-6 hover:shadow-md transition-shadow">
+          <div class="flex items-center justify-between mb-4">
+            <div class="text-slate-500 text-sm font-medium uppercase tracking-wide">Team Members</div>
+            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          </div>
+          <div class="text-3xl font-semibold text-slate-900">{{ todayStats.teamMembers }}</div>
+          <div class="text-xs text-slate-500 mt-1">Active contributors</div>
+        </div>
+
+        <!-- Blockers -->
+        <div class="bg-white rounded-lg border border-slate-200 p-6 hover:shadow-md transition-shadow">
+          <div class="flex items-center justify-between mb-4">
+            <div class="text-slate-500 text-sm font-medium uppercase tracking-wide">Blockers</div>
+            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div class="text-3xl font-semibold text-slate-900">{{ todayStats.blockers }}</div>
+          <div class="text-xs text-slate-500 mt-1">Reported issues</div>
+        </div>
+
+        <!-- Completion Rate -->
+        <div class="bg-white rounded-lg border border-slate-200 p-6 hover:shadow-md transition-shadow">
+          <div class="flex items-center justify-between mb-4">
+            <div class="text-slate-500 text-sm font-medium uppercase tracking-wide">Completion</div>
+            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div class="text-3xl font-semibold text-slate-900">{{ todayStats.completionRate }}%</div>
+          <div class="text-xs text-slate-500 mt-1">Success rate</div>
+        </div>
+      </div>
+
+      <!-- Main Content Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-lg border border-slate-200 p-6">
+          <h3 class="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h3>
+          <div class="space-y-3">
+            <a
+              routerLink="/post"
+              class="flex items-center gap-3 p-3 border border-slate-200 rounded-lg hover:border-slate-300 hover:bg-slate-50 transition-all"
+            >
+              <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              <div class="flex-1">
+                <div class="font-medium text-slate-900">Post Update</div>
+                <div class="text-xs text-slate-500">Share your daily standup</div>
+              </div>
+            </a>
+            
+            <a
+              routerLink="/feed"
+              class="flex items-center gap-3 p-3 border border-slate-200 rounded-lg hover:border-slate-300 hover:bg-slate-50 transition-all"
+            >
+              <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              </svg>
+              <div class="flex-1">
+                <div class="font-medium text-slate-900">View All Updates</div>
+                <div class="text-xs text-slate-500">Complete team feed</div>
+              </div>
+            </a>
+
+            <button
+              (click)="getAiSummary()"
+              [disabled]="isLoading"
+              class="w-full flex items-center gap-3 p-3 border border-slate-200 rounded-lg hover:border-slate-300 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+              <div class="flex-1 text-left">
+                <div class="font-medium text-slate-900">{{ isLoading ? 'Generating...' : 'Generate AI Report' }}</div>
+                <div class="text-xs text-slate-500">AI-powered summary</div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- AI Summary -->
+        <div class="lg:col-span-2 bg-white rounded-lg border border-slate-200 p-6">
+          <h3 class="text-lg font-semibold text-slate-900 mb-4">AI Summary</h3>
+          
+          <div
+            *ngIf="summary"
+            class="bg-slate-50 border border-slate-200 rounded-lg p-4 text-sm text-slate-700 leading-relaxed whitespace-pre-line"
+          >
+            {{ summary }}
+          </div>
+          <div *ngIf="!summary" class="text-slate-500 text-sm italic py-8 text-center">
+            Click "Generate AI Report" to create a summary of today's updates
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="bg-white rounded-lg border border-slate-200 p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-lg font-semibold text-slate-900">Recent Activity</h3>
+          <div class="flex items-center gap-3">
+            <button
+              (click)="setToday()"
+              [class.bg-slate-900]="isToday()"
+              [class.text-white]="isToday()"
+              [class.bg-white]="!isToday()"
+              [class.text-slate-700]="!isToday()"
+              class="px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium transition hover:border-slate-300"
+            >
+              Today
+            </button>
+            <input
+              type="date"
+              [(ngModel)]="selectedDate"
+              (ngModelChange)="onDateChange()"
+              class="border border-slate-200 px-4 py-2 rounded-lg text-sm focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none"
+            />
+          </div>
+        </div>
+
+        <div *ngIf="recentUpdates.length === 0" class="text-center py-12 text-slate-400">
+          <svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+          </svg>
+          <p class="text-sm">No updates for {{ selectedDate | date : 'mediumDate' }}</p>
+        </div>
+
+        <div class="space-y-3">
+          <div
+            *ngFor="let update of recentUpdates"
+            class="flex items-start gap-4 p-4 border border-slate-200 rounded-lg hover:border-slate-300 hover:bg-slate-50 transition-all"
+          >
+            <div class="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
+              {{ update.user_name.charAt(0) | uppercase }}
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="font-semibold text-slate-900">{{ update.user_name }}</span>
+                <span class="text-xs text-slate-400">•</span>
+                <span class="text-xs text-slate-500">{{ update.created_at | date : 'shortTime' }}</span>
+              </div>
+              <div class="text-sm text-slate-700 mb-1">
+                <span class="font-medium text-slate-900">Today:</span> {{ update.today }}
+              </div>
+              <div *ngIf="update.blockers && update.blockers !== 'None'" class="mt-2 flex items-start gap-2 text-xs">
+                <svg class="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span class="text-red-600">{{ update.blockers }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="recentUpdates.length > 0" class="mt-6 text-center">
+          <a
+            routerLink="/feed"
+            class="inline-flex items-center gap-2 text-slate-700 hover:text-slate-900 font-medium text-sm"
+          >
+            <span>View all updates</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  `,
+})
+export class DashboardComponent implements OnInit {
+  standups: Standup[] = [];
+  recentUpdates: Standup[] = [];
+  summary = '';
+  isLoading = false;
+  selectedDate: string = '';
+
+  todayStats = {
+    totalUpdates: 0,
+    teamMembers: 0,
+    blockers: 0,
+    completionRate: 100,
+  };
+
+  private standupService = inject(StandupService);
+
+  ngOnInit() {
+    this.setToday();
+    this.loadData();
+  }
+
+  loadData() {
+    this.standupService.getStandups().subscribe((data) => {
+      this.standups = data;
+      this.filterByDate();
+      this.calculateStats();
+    });
+  }
+
+  setToday() {
+    const today = new Date();
+    this.selectedDate = today.toISOString().split('T')[0];
+    this.filterByDate();
+  }
+
+  isToday(): boolean {
+    const today = new Date().toISOString().split('T')[0];
+    return this.selectedDate === today;
+  }
+
+  onDateChange() {
+    this.filterByDate();
+    this.calculateStats();
+  }
+
+  filterByDate() {
+    if (!this.selectedDate) return;
+
+    this.recentUpdates = this.standups
+      .filter((standup) => {
+        if (!standup.created_at) return false;
+        const standupDate = new Date(standup.created_at).toISOString().split('T')[0];
+        return standupDate === this.selectedDate;
+      })
+      .slice(0, 10);
+  }
+
+  calculateStats() {
+    const todayUpdates = this.recentUpdates;
+    this.todayStats.totalUpdates = todayUpdates.length;
+
+    const uniqueMembers = new Set(todayUpdates.map(u => u.user_name));
+    this.todayStats.teamMembers = uniqueMembers.size;
+
+    this.todayStats.blockers = todayUpdates.filter(
+      u => u.blockers && u.blockers !== 'None'
+    ).length;
+
+    this.todayStats.completionRate = todayUpdates.length > 0
+      ? Math.round(((todayUpdates.length - this.todayStats.blockers) / todayUpdates.length) * 100)
+      : 100;
+  }
+
+  getAiSummary() {
+    this.isLoading = true;
+    this.standupService.generateSummary().subscribe({
+      next: (res) => {
+        this.summary = res.summary;
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error(err);
+        this.summary = 'Failed to generate summary. Please try again.';
+        this.isLoading = false;
+      },
+    });
+  }
+}

@@ -35,4 +35,14 @@ export class StandupService {
   generateSummary(): Observable<{ summary: string }> {
     return this.http.post<{ summary: string }>(`${this.apiUrl}/summary`, {});
   }
+
+  // 4. Get Backlog (ClickUp)
+  getBacklog(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/backlog`);
+  }
+
+  // 5. Groom Task (AI)
+  groomTask(task: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/groom`, { task });
+  }
 }

@@ -1,0 +1,13 @@
+services:
+  backend:
+    build: ./server
+    container_name: scrumsage-backend
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./server/.env
+    restart: unless-stopped
+    volumes:
+      - ./server/src:/app/src
+    environment:
+      - NODE_ENV=production
