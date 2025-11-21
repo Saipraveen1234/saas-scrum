@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <linearGradient id="favGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ddbe0bff" /> <!-- Indigo 600 -->
+      <stop offset="100%" style="stop-color:#ddbe0bff" /> <!-- Purple 600 -->
+    </linearGradient>
+  </defs>
+
+  <!-- The Icon: Centered and thicker for small visibility -->
+  <path d="M20 30 L50 80 L80 20" stroke="url(#favGradient)" stroke-width="" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- The Nodes: Larger relative size for visibility -->
+  <circle cx="20" cy="30" r="8" fill="#4F46E5" />
+  <circle cx="50" cy="80" r="8" fill="#7C3AED" />
+  <circle cx="80" cy="20" r="8" fill="#9333EA" />
+
+</svg>

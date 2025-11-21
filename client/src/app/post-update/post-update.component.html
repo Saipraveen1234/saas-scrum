@@ -1,0 +1,115 @@
+<div class="max-w-full mx-auto">
+  <div class="bg-white rounded-lg shadow-sm border border-slate-200">
+    <!-- Header -->
+    <div class="border-b border-slate-200 p-6">
+      <h2 class="text-2xl font-semibold text-slate-900">Post Daily Update</h2>
+      <p class="text-slate-600 text-sm mt-1">Share your progress and plans with the team</p>
+    </div>
+
+    <!-- Form -->
+    <div class="p-6 space-y-6">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-2">
+          Name <span class="text-red-600">*</span>
+        </label>
+        <input
+          [(ngModel)]="user_name"
+          placeholder="Enter your name"
+          class="w-full border border-slate-300 px-4 py-2.5 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition"
+        />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-2">
+          Yesterday's Accomplishments <span class="text-red-600">*</span>
+        </label>
+        <textarea
+          [(ngModel)]="yesterday"
+          placeholder="What did you complete yesterday?"
+          rows="4"
+          class="w-full border border-slate-300 px-4 py-2.5 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition resize-none"
+        ></textarea>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-2">
+          Today's Plan <span class="text-red-600">*</span>
+        </label>
+        <textarea
+          [(ngModel)]="today"
+          placeholder="What are you working on today?"
+          rows="4"
+          class="w-full border border-slate-300 px-4 py-2.5 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition resize-none"
+        ></textarea>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-2">
+          Blockers
+        </label>
+        <input
+          [(ngModel)]="blockers"
+          placeholder="Any blockers or issues? (Optional)"
+          class="w-full border border-slate-300 px-4 py-2.5 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition"
+        />
+        <p class="text-xs text-slate-500 mt-1.5">Leave empty if you have no blockers</p>
+      </div>
+
+      <!-- Success Message -->
+      <div
+        *ngIf="showSuccess"
+        class="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3"
+      >
+        <svg class="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div>
+          <div class="font-medium text-green-900">Update posted successfully</div>
+          <div class="text-sm text-green-700">Redirecting to dashboard...</div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-3 pt-4 border-t border-slate-200">
+        <button
+          (click)="submit()"
+          [disabled]="isSubmitting"
+          class="flex-1 bg-slate-900 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-slate-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {{ isSubmitting ? 'Posting...' : 'Post Update' }}
+        </button>
+        <button
+          (click)="cancel()"
+          class="px-6 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Guidelines Card -->
+  <div class="mt-6 bg-slate-50 border border-slate-200 rounded-lg p-5">
+    <h3 class="font-medium text-slate-900 mb-3">Guidelines</h3>
+    <ul class="text-sm text-slate-600 space-y-2">
+      <li class="flex items-start gap-2">
+        <svg class="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+        <span>Be specific about completed tasks and deliverables</span>
+      </li>
+      <li class="flex items-start gap-2">
+        <svg class="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+        <span>Report blockers early to get timely assistance</span>
+      </li>
+      <li class="flex items-start gap-2">
+        <svg class="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+        <span>Keep updates concise but informative</span>
+      </li>
+    </ul>
+  </div>
+</div>
