@@ -1,6 +1,8 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+
+import { AuthService } from './auth.service';
 
 @Component({
   selector: 'app-root',
@@ -8,4 +10,10 @@ import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
   imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
   templateUrl: './app.component.html',
 })
-export class AppComponent { }
+export class AppComponent {
+  constructor(public authService: AuthService, public router: Router) {}
+
+  get isLoginPage(): boolean {
+    return this.router.url.startsWith('/login');
+  }
+}

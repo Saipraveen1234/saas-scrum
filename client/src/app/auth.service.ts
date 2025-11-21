@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 
 // TODO: Move these to environment files in a real production app
 const SUPABASE_URL = 'https://ftikbxoypwcqlprfwxrf.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_secret_DCIdkdkSc8rjdal8muo4Ug_LZqPRlHd';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0aWtieG95cHdjcWxwcmZ3eHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1NTQxMzksImV4cCI6MjA3OTEzMDEzOX0.m6GN1fhcc4EG4jvfqODTzVQj5lf0ra555xAt21zSCvQ';
 
 @Injectable({
   providedIn: 'root'
@@ -44,14 +44,20 @@ export class AuthService {
     }
   }
 
-  async signInWithEmail(email: string) {
-    const { error } = await this.supabase.auth.signInWithOtp({
+  async signUpWithEmail(email: string, password: string) {
+    const { data, error } = await this.supabase.auth.signUp({
       email,
-      options: {
-        emailRedirectTo: window.location.origin
-      }
+      password,
     });
-    return { error };
+    return { data, error };
+  }
+
+  async signInWithPassword(email: string, password: string) {
+    const { data, error } = await this.supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    return { data, error };
   }
 
   async signOut() {
