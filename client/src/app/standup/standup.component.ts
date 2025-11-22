@@ -16,11 +16,7 @@ export class StandupComponent implements OnInit {
   isLoading = false;
   selectedDate: string = '';
 
-  // Form Inputs
-  user_name = '';
-  yesterday = '';
-  today = '';
-  blockers = '';
+  // Form Inputs - REMOVED for Read-Only View
 
   private standupService = inject(StandupService);
 
@@ -58,28 +54,6 @@ export class StandupComponent implements OnInit {
       if (!standup.created_at) return false;
       const standupDate = new Date(standup.created_at).toISOString().split('T')[0];
       return standupDate === this.selectedDate;
-    });
-  }
-
-  submit() {
-    if (!this.user_name || !this.yesterday || !this.today) {
-      alert('Please fill in the required fields!');
-      return;
-    }
-
-    const newEntry: Partial<Standup> = {
-      user_name: this.user_name,
-      yesterday: this.yesterday,
-      today: this.today,
-      blockers: this.blockers || 'None',
-    };
-
-    this.standupService.postStandup(newEntry).subscribe(() => {
-      this.loadData(); // Refresh list
-      // Reset form (keep name)
-      this.yesterday = '';
-      this.today = '';
-      this.blockers = '';
     });
   }
 

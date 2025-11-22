@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { StandupService, Standup } from '../standup.service';
+import { AuthService } from '../auth.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -16,6 +17,7 @@ export class DashboardComponent implements OnInit {
   summary = '';
   isLoading = false;
   selectedDate: string = '';
+  userRole: 'admin' | 'employee' | null = null;
 
   todayStats = {
     totalUpdates: 0,
@@ -25,10 +27,24 @@ export class DashboardComponent implements OnInit {
   };
 
   private standupService = inject(StandupService);
+  private authService = inject(AuthService);
 
   ngOnInit() {
+    this.authService.userRole$.subscribe(role => {
+      this.userRole = role;
+    });
     this.setToday();
     this.loadData();
+    this.loadTeamCount();
+  }
+
+  loadTeamCount() {
+    this.standupService.getTeamCount().subscribe({
+      next: (res) => {
+        this.todayStats.teamMembers = res.count;
+      },
+      error: (err) => console.error('Failed to load team count', err)
+    });
   }
 
   loadData() {
@@ -71,8 +87,7 @@ export class DashboardComponent implements OnInit {
     const todayUpdates = this.recentUpdates;
     this.todayStats.totalUpdates = todayUpdates.length;
 
-    const uniqueMembers = new Set(todayUpdates.map(u => u.user_name));
-    this.todayStats.teamMembers = uniqueMembers.size;
+    this.todayStats.totalUpdates = todayUpdates.length;
 
     this.todayStats.blockers = todayUpdates.filter(
       u => u.blockers && u.blockers !== 'None'

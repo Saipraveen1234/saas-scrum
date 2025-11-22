@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { Client } from "pg";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ClickUpService } from "./clickup.service";
+import { authMiddleware, AuthRequest } from "./middleware/auth.middleware";
 
 dotenv.config();
 
@@ -38,11 +39,20 @@ app.get("/health", (req: Request, res: Response) => {
 });
 
 // 1. GET STANDUPS
-app.get("/api/standups", async (req: Request, res: Response) => {
+app.get("/api/standups", authMiddleware(dbClient), async (req: Request, res: Response) => {
   try {
-    const result = await dbClient.query(
-      "SELECT * FROM standups ORDER BY created_at DESC LIMIT 50"
-    );
+    const user = (req as AuthRequest).user;
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+    let query = "SELECT * FROM standups ORDER BY created_at DESC LIMIT 50";
+    let params: any[] = [];
+
+    if (user.role === 'employee') {
+      query = "SELECT * FROM standups WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50";
+      params = [user.id];
+    }
+
+    const result = await dbClient.query(query, params);
     res.json(result.rows);
   } catch (error) {
     res.status(500).json({ error: "Fetch failed" });
@@ -50,15 +60,23 @@ app.get("/api/standups", async (req: Request, res: Response) => {
 });
 
 // 2. POST STANDUP
-app.post("/api/standups", async (req: Request, res: Response) => {
+app.post("/api/standups", authMiddleware(dbClient), async (req: Request, res: Response) => {
   try {
+    const user = (req as AuthRequest).user;
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+    // Ensure employees can only post for themselves (though the UI might send user_name, we should trust the token more or validate)
+    // For now, we'll trust the token for user_id, and maybe keep user_name from body or fetch it?
+    // The current DB has user_name. We should probably fetch it from user_roles or just use what's sent but ensure user_id is set.
+    
     const { user_name, yesterday, today, blockers } = req.body;
+    
     const result = await dbClient.query(
       `
-      INSERT INTO standups (user_name, yesterday, today, blockers)
-      VALUES ($1, $2, $3, $4) RETURNING *
+      INSERT INTO standups (user_name, yesterday, today, blockers, user_id)
+      VALUES ($1, $2, $3, $4, $5) RETURNING *
     `,
-      [user_name, yesterday, today, blockers]
+      [user_name, yesterday, today, blockers, user.id]
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -106,6 +124,28 @@ app.post("/api/summary", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("AI Error:", error);
     res.status(500).json({ error: "AI generation failed", details: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+// 3.5 GET USER ROLE
+app.get("/api/users/me", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    const user = (req as AuthRequest).user;
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: "Fetch failed" });
+  }
+});
+
+// 3.6 GET USER COUNT
+app.get("/api/users/count", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    const result = await dbClient.query("SELECT COUNT(*) FROM user_roles WHERE role = 'employee'");
+    res.json({ count: parseInt(result.rows[0].count, 10) });
+  } catch (error) {
+    console.error("Count Error:", error);
+    res.status(500).json({ error: "Count failed" });
   }
 });
 
