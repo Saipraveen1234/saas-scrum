@@ -5,10 +5,12 @@ import { FormsModule } from '@angular/forms';
 import { StandupService, Standup } from '../standup.service';
 import { AuthService } from '../auth.service';
 
+import { MarkdownPipe } from '../pipes/markdown.pipe';
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule],
+  imports: [CommonModule, RouterLink, FormsModule, MarkdownPipe],
   templateUrl: './dashboard.component.html',
 })
 export class DashboardComponent implements OnInit {
@@ -18,6 +20,7 @@ export class DashboardComponent implements OnInit {
   isLoading = false;
   selectedDate: string = '';
   userRole: 'admin' | 'employee' | null = null;
+  userTeam: string | null = null;
 
   todayStats = {
     totalUpdates: 0,
@@ -32,6 +35,9 @@ export class DashboardComponent implements OnInit {
   ngOnInit() {
     this.authService.userRole$.subscribe(role => {
       this.userRole = role;
+    });
+    this.authService.userTeam$.subscribe(team => {
+      this.userTeam = team;
     });
     this.setToday();
     this.loadData();

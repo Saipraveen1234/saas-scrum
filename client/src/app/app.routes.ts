@@ -12,5 +12,10 @@ export const routes: Routes = [
     { path: 'post', component: PostUpdateComponent, canActivate: [authGuard] },
     { path: 'feed', component: StandupComponent, canActivate: [authGuard] },
     { path: 'backlog', component: BacklogComponent, canActivate: [authGuard] },
-    { path: '**', redirectTo: '' }
+    {
+        path: 'teams',
+        loadComponent: () => import('./team-management/team-management.component').then(m => m.TeamManagementComponent),
+        canActivate: [authGuard]
+    },
+    { path: '', redirectTo: '/login', pathMatch: 'full' }
 ];

@@ -15,13 +15,17 @@ export class AuthService {
   private supabase: SupabaseClient;
   private _currentUser = new BehaviorSubject<User | null>(null);
   private _userRole = new BehaviorSubject<'admin' | 'employee' | null>(null);
-  
+  private _userTeam = new BehaviorSubject<string | null>(null);
+  private _loading = new BehaviorSubject<boolean>(true);
+  private apiUrl = 'http://localhost:3000/api';
+
   constructor(private router: Router, private http: HttpClient) {
     this.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    
+
     // Initialize session
     this.supabase.auth.getSession().then(({ data: { session } }) => {
       this.updateUser(session);
+      this._loading.next(false);
     });
 
     // Listen for auth changes
@@ -30,12 +34,20 @@ export class AuthService {
     });
   }
 
+  get loading$(): Observable<boolean> {
+    return this._loading.asObservable();
+  }
+
   get currentUser$(): Observable<User | null> {
     return this._currentUser.asObservable();
   }
 
   get userRole$(): Observable<'admin' | 'employee' | null> {
     return this._userRole.asObservable();
+  }
+
+  get userTeam$(): Observable<string | null> {
+    return this._userTeam.asObservable();
   }
 
   get currentUserValue(): User | null {
@@ -58,21 +70,23 @@ export class AuthService {
     } else {
       this._currentUser.next(null);
       this._userRole.next(null);
+      this._userTeam.next(null);
     }
   }
 
   private fetchUserRole(token: string) {
-    this.http.get<any>('http://localhost:3000/api/users/me', {
+    this.http.get<any>(`${this.apiUrl}/users/me`, {
       headers: { Authorization: `Bearer ${token}` }
     }).subscribe({
       next: (user) => {
-        console.log('[AuthService] Fetched role:', user.role);
+        console.log('[AuthService] Fetched profile:', user);
         this._userRole.next(user.role);
+        this._userTeam.next(user.team_name || null);
       },
       error: (err) => {
-        console.error('[AuthService] Failed to fetch role', err);
-        // Default to employee if failed? Or null?
-        this._userRole.next('employee'); 
+        console.error('[AuthService] Failed to fetch profile', err);
+        this._userRole.next('employee');
+        this._userTeam.next(null);
       }
     });
   }

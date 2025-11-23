@@ -11,6 +11,7 @@ export interface Standup {
   today: string;
   blockers: string;
   created_at?: string;
+  team_name?: string;
 }
 
 @Injectable({
