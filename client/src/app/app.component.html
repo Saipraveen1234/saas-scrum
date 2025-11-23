@@ -3,76 +3,47 @@
     <!-- Header -->
     <header *ngIf="!isLoginPage" class="mb-8 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <svg class="h-14 w-auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 80" fill="none">
-          <defs>
-            <linearGradient id="velosGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" style="stop-color:#4F46E5" /> <!-- Indigo 600 -->
-              <stop offset="100%" style="stop-color:#9333EA" /> <!-- Purple 600 -->
-            </linearGradient>
-          </defs>
-        
-          <!-- The Icon: A stylized 'V' made of connected nodes (Neural Network + Velocity) -->
-          <path d="M30 20 L50 60 L90 10" stroke="url(#velosGradient)" stroke-width="" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="30" cy="20" r="6" fill="#4F46E5" />
-          <circle cx="50" cy="60" r="6" fill="#7C3AED" />
-          <circle cx="90" cy="10" r="6" fill="#9333EA" />
-        
-          <!-- The Text: Modern Sans-Serif -->
-          <text x="110" y="55" font-family="Arial, sans-serif" font-weight="bold" font-size="48" fill="#1E293B">
-            Velos <tspan fill="url(#velosGradient)">AI</tspan>
-          </text>
-        </svg>
+        <img src="logo.png" alt="Velos AI" class="h-14 w-auto">
       </div>
 
       <!-- Navigation -->
-      <nav *ngIf="authService.currentUser$ | async" class="flex gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
-        <a
-          routerLink="/"
-          routerLinkActive="bg-slate-900 text-white"
-          [routerLinkActiveOptions]="{ exact: true }"
-          class="px-4 py-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition text-sm font-medium flex items-center gap-2"
-        >
+      <nav *ngIf="authService.currentUser$ | async"
+        class="flex gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+        <a routerLink="/" routerLinkActive="bg-slate-900 text-white" [routerLinkActiveOptions]="{ exact: true }"
+          class="px-4 py-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition text-sm font-medium flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
           </svg>
           <span>Dashboard</span>
         </a>
-        <a
-          routerLink="/post"
-          routerLinkActive="bg-slate-900 text-white"
-          class="px-4 py-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition text-sm font-medium flex items-center gap-2"
-        >
+        <a routerLink="/post" routerLinkActive="bg-slate-900 text-white"
+          class="px-4 py-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition text-sm font-medium flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
           </svg>
           <span>Post Update</span>
         </a>
-        <a
-          routerLink="/feed"
-          routerLinkActive="bg-slate-900 text-white"
-          class="px-4 py-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition text-sm font-medium flex items-center gap-2"
-        >
+        <a routerLink="/feed" routerLinkActive="bg-slate-900 text-white"
+          class="px-4 py-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition text-sm font-medium flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
           </svg>
           <span>Feed</span>
         </a>
-        <a
-          routerLink="/backlog"
-          routerLinkActive="bg-slate-900 text-white"
-          class="px-4 py-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition text-sm font-medium flex items-center gap-2"
-        >
+        <a routerLink="/backlog" routerLinkActive="bg-slate-900 text-white"
+          class="px-4 py-2 rounded-md text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition text-sm font-medium flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
           </svg>
           <span>Backlog</span>
         </a>
-        <button
-          (click)="authService.signOut()"
-          class="px-4 py-2 rounded-md text-red-600 hover:text-red-900 hover:bg-red-50 transition text-sm font-medium flex items-center gap-2"
-        >
+        <button (click)="authService.signOut()"
+          class="px-4 py-2 rounded-md text-red-600 hover:text-red-900 hover:bg-red-50 transition text-sm font-medium flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
           </svg>
           <span>Sign Out</span>
         </button>
