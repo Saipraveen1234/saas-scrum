@@ -68,9 +68,9 @@ app.post("/api/standups", authMiddleware(dbClient), async (req: Request, res: Re
     // Ensure employees can only post for themselves (though the UI might send user_name, we should trust the token more or validate)
     // For now, we'll trust the token for user_id, and maybe keep user_name from body or fetch it?
     // The current DB has user_name. We should probably fetch it from user_roles or just use what's sent but ensure user_id is set.
-    
+
     const { user_name, yesterday, today, blockers } = req.body;
-    
+
     const result = await dbClient.query(
       `
       INSERT INTO standups (user_name, yesterday, today, blockers, user_id)
@@ -84,117 +84,154 @@ app.post("/api/standups", authMiddleware(dbClient), async (req: Request, res: Re
   }
 });
 
-// 3. GENERATE AI SUMMARY (The New Feature)
-app.post("/api/summary", async (req: Request, res: Response) => {
+// --- TEAMS ROUTES ---
+
+// 6. GET TEAMS
+app.get("/api/teams", authMiddleware(dbClient), async (req: Request, res: Response) => {
   try {
-    // A. Get today's data
-    const result = await dbClient.query(
-      "SELECT * FROM standups ORDER BY created_at DESC LIMIT 20"
-    );
-    const updates = result.rows;
-
-    if (updates.length === 0)
-      return res.json({ summary: "No updates available to summarize." });
-
-    // B. Construct the Prompt
-    const updatesText = updates
-      .map(
-        (u: any) =>
-          `- ${u.user_name}: Done: "${u.yesterday}", Doing: "${u.today}", Blockers: "${u.blockers}"`
-      )
-      .join("\n");
-
-    const prompt = `
-      You are an expert Scrum Master. Summarize these daily updates for the Team Lead.
-      Identify: 1) Critical Blockers, 2) Key Progress, 3) Risk Level (Low/High).
-      Keep it concise.
-      
-      Updates:
-      ${updatesText}
-    `;
-
-    // C. Call Gemini
-    const aiResult = await model.generateContent(prompt);
-    const summary = aiResult.response.text();
-
-    // D. Save to DB (Optional, but good for history)
-    // await dbClient.query('INSERT INTO ai_summaries (summary_text, date_str) VALUES ($1, $2)', [summary, new Date().toDateString()]);
-
-    res.json({ summary });
+    const result = await dbClient.query("SELECT * FROM teams ORDER BY name");
+    res.json(result.rows);
   } catch (error) {
-    console.error("AI Error:", error);
-    res.status(500).json({ error: "AI generation failed", details: error instanceof Error ? error.message : String(error) });
+    res.status(500).json({ error: "Fetch teams failed" });
   }
 });
 
-// 3.5 GET USER ROLE
+// 7. CREATE TEAM
+app.post("/api/teams", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    const user = (req as AuthRequest).user;
+    if (user?.role !== 'admin') return res.status(403).json({ error: "Forbidden" });
+
+    const { name } = req.body;
+    const result = await dbClient.query(
+      "INSERT INTO teams (name) VALUES ($1) RETURNING *",
+      [name]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: "Create team failed" });
+  }
+});
+
+// 8. GET USERS (for admin to assign teams)
+app.get("/api/users", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    const user = (req as AuthRequest).user;
+    if (user?.role !== 'admin') return res.status(403).json({ error: "Forbidden" });
+
+    const result = await dbClient.query(`
+      SELECT ur.user_id, ur.email, ur.name, ur.role, ur.team_id, t.name as team_name
+      FROM user_roles ur
+      LEFT JOIN teams t ON ur.team_id = t.id
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: "Fetch users failed" });
+  }
+});
+
+// 8.5 GET CURRENT USER
 app.get("/api/users/me", authMiddleware(dbClient), async (req: Request, res: Response) => {
   try {
     const user = (req as AuthRequest).user;
     if (!user) return res.status(401).json({ error: "Unauthorized" });
     res.json(user);
   } catch (error) {
-    res.status(500).json({ error: "Fetch failed" });
+    res.status(500).json({ error: "Fetch me failed" });
   }
 });
 
-// 3.6 GET USER COUNT
-app.get("/api/users/count", authMiddleware(dbClient), async (req: Request, res: Response) => {
+// 9. ASSIGN USER TO TEAM
+app.put("/api/users/:id/team", authMiddleware(dbClient), async (req: Request, res: Response) => {
   try {
-    const result = await dbClient.query("SELECT COUNT(*) FROM user_roles WHERE role = 'employee'");
-    res.json({ count: parseInt(result.rows[0].count, 10) });
+    const user = (req as AuthRequest).user;
+    if (user?.role !== 'admin') return res.status(403).json({ error: "Forbidden" });
+
+    const { team_id } = req.body;
+    const targetUserId = req.params.id;
+
+    await dbClient.query(
+      "UPDATE user_roles SET team_id = $1 WHERE user_id = $2",
+      [team_id, targetUserId]
+    );
+    res.json({ status: "Updated" });
   } catch (error) {
-    console.error("Count Error:", error);
-    res.status(500).json({ error: "Count failed" });
+    res.status(500).json({ error: "Update user team failed" });
   }
 });
 
-
-// 4. GET BACKLOG (ClickUp)
-app.get("/api/backlog", async (req: Request, res: Response) => {
+// 3. GENERATE AI SUMMARY (Updated for Teams)
+app.post("/api/summary", authMiddleware(dbClient), async (req: Request, res: Response) => {
   try {
-    const listId = process.env.CLICKUP_LIST_ID;
-    if (!listId) {
-      return res.status(400).json({ error: "CLICKUP_LIST_ID not configured" });
+    // A. Get today's data with team info
+    const result = await dbClient.query(`
+      SELECT s.*, t.name as team_name 
+      FROM standups s
+      LEFT JOIN user_roles ur ON s.user_id = ur.user_id
+      LEFT JOIN teams t ON ur.team_id = t.id
+      ORDER BY t.name, s.created_at DESC 
+      LIMIT 50
+    `);
+    const updates = result.rows;
+
+    if (updates.length === 0)
+      return res.json({ summary: "No updates available to summarize." });
+
+    // B. Group by Team
+    const updatesByTeam: Record<string, any[]> = {};
+    updates.forEach((u: any) => {
+      const team = u.team_name || 'Unassigned';
+      if (!updatesByTeam[team]) updatesByTeam[team] = [];
+      updatesByTeam[team].push(u);
+    });
+
+    // C. Construct Prompt
+    let updatesText = "";
+    for (const [team, teamUpdates] of Object.entries(updatesByTeam)) {
+      updatesText += `\nTeam: ${team}\n`;
+      updatesText += teamUpdates.map(
+        (u: any) => `- ${u.user_name}: Done: "${u.yesterday}", Doing: "${u.today}", Blockers: "${u.blockers}"`
+      ).join("\n");
     }
-    const tasks = await clickupService.getTasks(listId);
-    res.json(tasks);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch backlog" });
-  }
-});
-
-// 5. GROOM TASK (AI)
-app.post("/api/groom", async (req: Request, res: Response) => {
-  try {
-    const { task } = req.body;
-    if (!task) return res.status(400).json({ error: "Task data required" });
 
     const prompt = `
-      You are an expert Agile Coach. Review this backlog task and suggest improvements.
+      You are an expert Scrum Master. Summarize these daily updates for the Team Lead, grouped by Project Team.
       
-      Task Name: ${task.name}
-      Description: ${task.description || "No description provided."}
-      
-      Provide:
-      1. Better Title (if needed)
-      2. Improved Description (clearer, user story format)
-      3. Acceptance Criteria (list)
-      4. Estimated Story Points (Fibonacci: 1, 2, 3, 5, 8...)
-      
-      Output JSON format: { "title": "...", "description": "...", "acceptance_criteria": ["..."], "points": 3 }
+      For each Team:
+      1. **Team Name**
+      2. **Critical Blockers**
+      3. **Key Progress**
+      4. **Risk Level** (Low/High)
+
+      Updates:
+      ${updatesText}
     `;
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    // D. Call Gemini
+    const aiResult = await model.generateContent(prompt);
+    const summary = aiResult.response.text();
 
-    // Cleanup JSON if needed (Gemini sometimes adds markdown blocks)
-    const jsonStr = text.replace(/```json/g, "").replace(/```/g, "").trim();
-
-    res.json(JSON.parse(jsonStr));
+    res.json({ summary });
   } catch (error) {
-    console.error("Grooming Error:", error);
-    res.status(500).json({ error: "Grooming failed" });
+    console.error("AI Error:", error);
+    res.status(500).json({ error: "AI generation failed" });
+  }
+});
+
+// DEBUG ROUTE
+app.get("/api/debug-user", async (req: Request, res: Response) => {
+  try {
+    const { email } = req.query;
+    if (!email) return res.status(400).json({ error: "Email required" });
+
+    const result = await dbClient.query("SELECT * FROM user_roles WHERE email = $1", [email]);
+    res.json({
+      count: result.rowCount,
+      rows: result.rows,
+      db_url_masked: process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 20) + '...' : 'Not Set'
+    });
+  } catch (error) {
+    res.status(500).json({ error: String(error) });
   }
 });
 

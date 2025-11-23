@@ -23,6 +23,8 @@ export interface AuthRequest extends Request {
     id: string;
     email: string;
     role: 'admin' | 'employee';
+    team_id?: number | null;
+    team_name?: string | null;
   };
 }
 
@@ -40,15 +42,26 @@ export const authMiddleware = (dbClient: Client) => async (req: Request, res: Re
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    // Fetch role from DB
-    const roleResult = await dbClient.query('SELECT role FROM user_roles WHERE user_id = $1', [user.id]);
+    // Fetch role and team from DB
+    const roleResult = await dbClient.query(`
+      SELECT ur.role, ur.team_id, t.name as team_name 
+      FROM user_roles ur 
+      LEFT JOIN teams t ON ur.team_id = t.id 
+      WHERE ur.user_id = $1
+    `, [user.id]);
+
     let role: 'admin' | 'employee' = 'employee'; // Default
+    let team_id: number | null = null;
+    let team_name: string | null = null;
 
     console.log(`[AuthMiddleware] User ID: ${user.id}`);
-    
+
     if (roleResult.rows.length > 0) {
-      role = roleResult.rows[0].role;
-      console.log(`[AuthMiddleware] Role found in DB: ${role}`);
+      const row = roleResult.rows[0];
+      role = row.role;
+      team_id = row.team_id;
+      team_name = row.team_name;
+      console.log(`[AuthMiddleware] Role: ${role}, Team: ${team_name}`);
     } else {
       console.log(`[AuthMiddleware] No role found in DB, defaulting to: ${role}`);
     }
@@ -56,7 +69,9 @@ export const authMiddleware = (dbClient: Client) => async (req: Request, res: Re
     (req as AuthRequest).user = {
       id: user.id,
       email: user.email || '',
-      role: role
+      role: role,
+      team_id: team_id,
+      team_name: team_name
     };
 
     next();
