@@ -95,9 +95,12 @@ export class DashboardComponent implements OnInit {
 
     this.todayStats.totalUpdates = todayUpdates.length;
 
-    this.todayStats.blockers = todayUpdates.filter(
-      u => u.blockers && u.blockers !== 'None'
-    ).length;
+    this.todayStats.blockers = todayUpdates.filter(u => {
+      if (!u.blockers) return false;
+      const lower = u.blockers.trim().toLowerCase();
+      const nonBlockers = ['none', 'no', 'nil', 'n/a', 'nothing', 'no blockers', 'no blocker', '-', ''];
+      return !nonBlockers.includes(lower);
+    }).length;
 
     this.todayStats.completionRate = todayUpdates.length > 0
       ? Math.round(((todayUpdates.length - this.todayStats.blockers) / todayUpdates.length) * 100)

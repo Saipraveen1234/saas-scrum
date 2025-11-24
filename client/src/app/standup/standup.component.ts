@@ -12,8 +12,7 @@ import { StandupService, Standup } from '../standup.service';
 export class StandupComponent implements OnInit {
   standups: Standup[] = [];
   filteredStandups: Standup[] = [];
-  summary = '';
-  isLoading = false;
+
   selectedDate: string = '';
 
   // Form Inputs - REMOVED for Read-Only View
@@ -57,19 +56,5 @@ export class StandupComponent implements OnInit {
     });
   }
 
-  getAiSummary() {
-    this.isLoading = true;
-    this.standupService.generateSummary().subscribe({
-      next: (res) => {
-        this.summary = res.summary;
-        this.isLoading = false;
-      },
-      error: (err) => {
-        console.error(err);
-        this.summary =
-          '⚠️ Failed to generate summary. Check backend console for details.';
-        this.isLoading = false;
-      },
-    });
-  }
+
 }

@@ -130,6 +130,16 @@ app.get("/api/users", authMiddleware(dbClient), async (req: Request, res: Respon
   }
 });
 
+// 8.4 GET USER COUNT
+app.get("/api/users/count", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    const result = await dbClient.query("SELECT COUNT(*) FROM user_roles WHERE role = 'employee'");
+    res.json({ count: parseInt(result.rows[0].count, 10) });
+  } catch (error) {
+    res.status(500).json({ error: "Fetch user count failed" });
+  }
+});
+
 // 8.5 GET CURRENT USER
 app.get("/api/users/me", authMiddleware(dbClient), async (req: Request, res: Response) => {
   try {
