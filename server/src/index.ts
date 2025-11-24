@@ -173,15 +173,24 @@ app.put("/api/users/:id/team", authMiddleware(dbClient), async (req: Request, re
 // 3. GENERATE AI SUMMARY (Updated for Teams)
 app.post("/api/summary", authMiddleware(dbClient), async (req: Request, res: Response) => {
   try {
-    // A. Get today's data with team info
+    const { date } = req.body;
+
+    // Default to today if no date provided
+    let targetDate = new Date().toISOString().split('T')[0];
+    if (date) {
+      targetDate = date;
+    }
+
+    // A. Get data for the specific date with team info
     const result = await dbClient.query(`
       SELECT s.*, t.name as team_name 
       FROM standups s
       LEFT JOIN user_roles ur ON s.user_id = ur.user_id
       LEFT JOIN teams t ON ur.team_id = t.id
+      WHERE s.created_at::date = $1
       ORDER BY t.name, s.created_at DESC 
       LIMIT 50
-    `);
+    `, [targetDate]);
     const updates = result.rows;
 
     if (updates.length === 0)
@@ -225,6 +234,48 @@ app.post("/api/summary", authMiddleware(dbClient), async (req: Request, res: Res
   } catch (error) {
     console.error("AI Error:", error);
     res.status(500).json({ error: "AI generation failed" });
+  }
+});
+
+// 10. GET TASKS (ClickUp)
+app.get("/api/tasks", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    const user = (req as AuthRequest).user;
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+    const listId = process.env.CLICKUP_LIST_ID;
+    console.log(`[API] Checking Env Vars - List ID: ${listId ? 'Set' : 'Missing'}, API Key: ${process.env.CLICKUP_API_KEY ? 'Set' : 'Missing'}`);
+
+    if (!listId) {
+      console.error("[API] Error: CLICKUP_LIST_ID is not set in environment variables.");
+      return res.json([]);
+    }
+
+    console.log(`[API] Fetching tasks for user: ${user.email}`);
+    console.log(`[API] Using ClickUp List ID: ${listId}`);
+
+    const allTasks = await clickupService.getTasks(listId);
+    console.log(`[API] Fetched ${allTasks.length} tasks from ClickUp`);
+
+    // Check if admin wants all tasks
+    const showAll = req.query.all === 'true';
+
+    if (showAll && user.role === 'admin') {
+      console.log(`[API] Admin ${user.email} requesting ALL tasks`);
+      return res.json(allTasks);
+    }
+
+    // Filter tasks assigned to the current user
+    const myTasks = allTasks.filter((task: any) => {
+      const assignees = task.assignees || [];
+      return assignees.some((assignee: any) => assignee.email === user.email);
+    });
+
+    console.log(`[API] Found ${myTasks.length} tasks for user ${user.email}`);
+    res.json(myTasks);
+  } catch (error) {
+    console.error("Fetch tasks failed:", error);
+    res.status(500).json({ error: "Fetch tasks failed" });
   }
 });
 

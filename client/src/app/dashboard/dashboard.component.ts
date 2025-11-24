@@ -109,7 +109,7 @@ export class DashboardComponent implements OnInit {
 
   getAiSummary() {
     this.isLoading = true;
-    this.standupService.generateSummary().subscribe({
+    this.standupService.generateSummary(this.selectedDate).subscribe({
       next: (res) => {
         this.summary = res.summary;
         this.isLoading = false;

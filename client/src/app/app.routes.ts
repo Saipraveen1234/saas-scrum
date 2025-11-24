@@ -17,5 +17,10 @@ export const routes: Routes = [
         loadComponent: () => import('./team-management/team-management.component').then(m => m.TeamManagementComponent),
         canActivate: [authGuard]
     },
+    {
+        path: 'tasks',
+        loadComponent: () => import('./tasks/tasks.component').then(m => m.TasksComponent),
+        canActivate: [authGuard]
+    },
     { path: '', redirectTo: '/login', pathMatch: 'full' }
 ];

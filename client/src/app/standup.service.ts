@@ -45,11 +45,11 @@ export class StandupService {
   }
 
   // 3. Call the AI Brain
-  generateSummary(): Observable<{ summary: string }> {
+  generateSummary(date?: string): Observable<{ summary: string }> {
     return from(this.authService.getToken()).pipe(
       switchMap(token => {
         const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-        return this.http.post<{ summary: string }>(`${this.apiUrl}/summary`, {}, { headers });
+        return this.http.post<{ summary: string }>(`${this.apiUrl}/summary`, { date }, { headers });
       })
     );
   }
@@ -70,6 +70,17 @@ export class StandupService {
       switchMap(token => {
         const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
         return this.http.get<{ count: number }>(`${this.apiUrl}/users/count`, { headers });
+      })
+    );
+  }
+
+  // 7. Get My Tasks (ClickUp)
+  getTasks(all: boolean = false): Observable<any[]> {
+    return from(this.authService.getToken()).pipe(
+      switchMap(token => {
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+        const url = all ? `${this.apiUrl}/tasks?all=true` : `${this.apiUrl}/tasks`;
+        return this.http.get<any[]>(url, { headers });
       })
     );
   }
