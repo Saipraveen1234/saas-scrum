@@ -5,6 +5,7 @@ import { StandupComponent } from './standup/standup.component';
 import { BacklogComponent } from './backlog/backlog.component';
 import { LoginComponent } from './login/login.component';
 import { authGuard } from './auth.guard';
+import { TasksComponent } from './tasks/tasks.component';
 
 export const routes: Routes = [
     { path: 'login', component: LoginComponent },
@@ -22,5 +23,10 @@ export const routes: Routes = [
         loadComponent: () => import('./tasks/tasks.component').then(m => m.TasksComponent),
         canActivate: [authGuard]
     },
-    { path: '', redirectTo: '/login', pathMatch: 'full' }
+    {
+        path: 'planning',
+        loadComponent: () => import('./sprint-planning/sprint-planning.component').then(m => m.SprintPlanningComponent),
+        canActivate: [authGuard]
+    },
+    { path: '**', redirectTo: '', pathMatch: 'full' }
 ];

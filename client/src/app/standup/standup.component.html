@@ -1,97 +1,117 @@
-<div class="max-w-full mx-auto">
+<div class="space-y-8">
+  <div class="flex justify-between items-center">
+    <div>
+      <h1 class="text-3xl font-bold text-slate-900">Daily Standup</h1>
+      <p class="text-slate-500 mt-1">Share your progress and blockers with the team.</p>
+    </div>
+    <div class="flex gap-3">
+      <button (click)="generateSummary()" [disabled]="isLoading"
+        class="bg-white text-slate-700 border border-slate-300 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50 font-medium">
+        {{ isLoading ? 'Generating...' : 'Generate Summary' }}
+      </button>
+      <button (click)="postToSlack()" [disabled]="isPosting"
+        class="bg-[#4A154B] text-white px-4 py-2 rounded-lg hover:bg-[#3b113c] transition-colors disabled:opacity-50 font-medium flex items-center gap-2">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.522 2.521 2.527 2.527 0 0 1-2.522-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.522-2.522v-2.522h2.522zM15.165 17.688a2.527 2.527 0 0 1-2.522-2.522 2.527 2.527 0 0 1 2.522-2.522h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" />
+        </svg>
+        {{ isPosting ? 'Posting...' : 'Post to Slack' }}
+      </button>
+    </div>
+  </div>
 
-
-  <div class="max-w-4xl mx-auto">
-    <!-- Feed Header -->
-    <div class="flex justify-between items-center mb-6">
-      <h3 class="font-bold text-slate-700 flex items-center gap-2 text-xl">
-        Team Feed
-        <span
-          class="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-xs"
-          >{{ filteredStandups.length }}</span
-        >
-      </h3>
-      
-      <div class="flex items-center gap-2">
-        <button
-          (click)="setToday()"
-          [class.bg-indigo-600]="isToday()"
-          [class.text-white]="isToday()"
-          [class.bg-slate-100]="!isToday()"
-          [class.text-slate-600]="!isToday()"
-          class="px-3 py-1.5 rounded-lg text-sm font-medium transition"
-        >
-          Today
-        </button>
-        <input
-          type="date"
-          [(ngModel)]="selectedDate"
-          (ngModelChange)="onDateChange()"
-          class="border border-slate-300 px-3 py-1.5 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-        />
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Input Form -->
+    <div class="lg:col-span-1">
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 sticky top-8">
+        <h2 class="text-lg font-bold text-slate-900 mb-4">Your Update</h2>
+        <form (ngSubmit)="submitStandup()" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Yesterday</label>
+            <textarea [(ngModel)]="formData.yesterday" name="yesterday" rows="3"
+              class="w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+              placeholder="What did you work on?"></textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Today</label>
+            <textarea [(ngModel)]="formData.today" name="today" rows="3"
+              class="w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+              placeholder="What will you work on?"></textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Blockers</label>
+            <textarea [(ngModel)]="formData.blockers" name="blockers" rows="2"
+              class="w-full rounded-lg border-slate-300 focus:border-red-500 focus:ring-red-500 text-sm"
+              placeholder="Any blockers?"></textarea>
+          </div>
+          <button type="submit" [disabled]="isSubmitting || !formData.yesterday || !formData.today"
+            class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 font-medium disabled:opacity-50 transition-colors">
+            {{ isSubmitting ? 'Posting...' : 'Post Update' }}
+          </button>
+        </form>
       </div>
     </div>
 
-    <!-- Empty State -->
-    <div
-      *ngIf="filteredStandups.length === 0"
-      class="text-center py-12 text-slate-400 bg-slate-50 rounded-xl border border-slate-200 border-dashed"
-    >
-      <p>No updates for {{ selectedDate | date : 'mediumDate' }}.</p>
-    </div>
+    <!-- Feed & Summary -->
+    <div class="lg:col-span-2 space-y-6">
+      <!-- AI Summary -->
+      <div *ngIf="summary"
+        class="bg-gradient-to-br from-indigo-50 to-white rounded-xl border border-indigo-100 p-6 shadow-sm">
+        <div class="flex justify-between items-start mb-4">
+          <h2 class="text-lg font-bold text-indigo-900 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            AI Summary
+          </h2>
+          <button class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">Edit</button>
+        </div>
+        <div class="prose prose-indigo max-w-none">
+          <textarea [(ngModel)]="summary"
+            class="w-full bg-transparent border-0 p-0 text-slate-700 focus:ring-0 resize-none h-auto"
+            rows="6"></textarea>
+        </div>
+      </div>
 
-    <!-- Feed Items -->
-    <div class="space-y-4">
-      <div
-        *ngFor="let update of filteredStandups"
-        class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
-      >
-        <div
-          class="flex justify-between items-start mb-4 border-b border-slate-50 pb-3"
-        >
-          <div class="flex items-center gap-3">
-            <div
-              class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-sm font-bold"
-            >
-              {{ update.user_name.charAt(0) | uppercase }}
+      <!-- Updates Feed -->
+      <div class="space-y-4">
+        <div *ngFor="let update of updates"
+          class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 hover:border-indigo-200 transition-colors">
+          <div class="flex justify-between items-start mb-4">
+            <div class="flex items-center gap-3">
+              <div class="h-10 w-10 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold">
+                {{ update.user_email[0].toUpperCase() }}
+              </div>
+              <div>
+                <h3 class="font-bold text-slate-900">{{ update.user_email }}</h3>
+                <p class="text-xs text-slate-500">{{ update.created_at | date:'short' }}</p>
+              </div>
+            </div>
+            <span *ngIf="update.team_name"
+              class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full font-medium">
+              {{ update.team_name }}
+            </span>
+          </div>
+
+          <div class="space-y-3 pl-13">
+            <div>
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Yesterday</span>
+              <p class="text-slate-700">{{ update.yesterday }}</p>
             </div>
             <div>
-              <div class="font-bold text-slate-900">{{ update.user_name }}</div>
-              <div class="text-xs text-slate-500">Team Member</div>
+              <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Today</span>
+              <p class="text-slate-700">{{ update.today }}</p>
             </div>
-          </div>
-          <div class="text-right">
-            <div class="text-sm text-slate-600 font-medium">
-              {{ update.created_at | date : 'mediumDate' }}
-            </div>
-            <div class="text-xs text-slate-400 font-mono">
-              {{ update.created_at | date : 'shortTime' }}
+            <div *ngIf="update.blockers">
+              <span class="text-xs font-bold text-red-400 uppercase tracking-wider block mb-1">Blockers</span>
+              <p class="text-red-600 bg-red-50 p-2 rounded border border-red-100 inline-block">{{ update.blockers }}</p>
             </div>
           </div>
         </div>
 
-        <div class="space-y-4 text-sm">
-          <div class="grid grid-cols-[100px_1fr] gap-4">
-            <span class="font-bold text-slate-400 text-xs uppercase pt-1 tracking-wider"
-              >Completed</span
-            >
-            <p class="text-slate-700 leading-relaxed">{{ update.yesterday }}</p>
-          </div>
-          <div class="grid grid-cols-[100px_1fr] gap-4">
-            <span class="font-bold text-indigo-500 text-xs uppercase pt-1 tracking-wider"
-              >In Progress</span
-            >
-            <p class="text-slate-900 font-medium leading-relaxed">{{ update.today }}</p>
-          </div>
-          <div
-            *ngIf="update.blockers && update.blockers !== 'None'"
-            class="grid grid-cols-[100px_1fr] gap-4 bg-red-50 p-3 rounded-lg -mx-3"
-          >
-            <span class="font-bold text-red-500 text-xs uppercase pt-1 tracking-wider pl-3"
-              >Blockers</span
-            >
-            <p class="text-red-700 font-medium">{{ update.blockers }}</p>
-          </div>
+        <div *ngIf="updates.length === 0"
+          class="text-center py-12 text-slate-500 bg-white rounded-xl border border-slate-200 border-dashed">
+          No updates yet today. Be the first to post!
         </div>
       </div>
     </div>
