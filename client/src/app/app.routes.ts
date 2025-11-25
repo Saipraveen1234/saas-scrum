@@ -24,9 +24,9 @@ export const routes: Routes = [
         canActivate: [authGuard]
     },
     {
-        path: 'planning',
-        loadComponent: () => import('./sprint-planning/sprint-planning.component').then(m => m.SprintPlanningComponent),
+        path: 'settings',
+        loadComponent: () => import('./settings/settings.component').then(m => m.SettingsComponent),
         canActivate: [authGuard]
     },
-    { path: '**', redirectTo: '', pathMatch: 'full' }
+    { path: '', redirectTo: '/login', pathMatch: 'full' }
 ];

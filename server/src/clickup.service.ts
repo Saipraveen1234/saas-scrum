@@ -39,55 +39,29 @@ export class ClickUpService {
         }
     }
 
-    async getList(listId: string): Promise<any> {
+    async updateTaskStatus(taskId: string, status: string): Promise<any> {
         if (!this.apiKey) return null;
-        try {
-            const response = await fetch(`${CLICKUP_API_URL}/list/${listId}`, {
-                method: "GET",
-                headers: { Authorization: this.apiKey }
-            });
-            if (!response.ok) throw new Error(`ClickUp API Error: ${response.statusText}`);
-            return await response.json();
-        } catch (error) {
-            console.error("Failed to fetch ClickUp list:", error);
-            throw error;
-        }
-    }
 
-    async createList(folderId: string, name: string): Promise<any> {
-        if (!this.apiKey) return null;
         try {
-            const response = await fetch(`${CLICKUP_API_URL}/folder/${folderId}/list`, {
-                method: "POST",
-                headers: {
-                    Authorization: this.apiKey,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ name })
-            });
-            if (!response.ok) throw new Error(`ClickUp API Error: ${response.statusText}`);
-            return await response.json();
-        } catch (error) {
-            console.error("Failed to create ClickUp list:", error);
-            throw error;
-        }
-    }
+            const response = await fetch(
+                `${CLICKUP_API_URL}/task/${taskId}`,
+                {
+                    method: "PUT",
+                    headers: {
+                        Authorization: this.apiKey,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ status })
+                }
+            );
 
-    async updateTask(taskId: string, body: any): Promise<any> {
-        if (!this.apiKey) return null;
-        try {
-            const response = await fetch(`${CLICKUP_API_URL}/task/${taskId}`, {
-                method: "PUT",
-                headers: {
-                    Authorization: this.apiKey,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(body)
-            });
-            if (!response.ok) throw new Error(`ClickUp API Error: ${response.statusText}`);
+            if (!response.ok) {
+                throw new Error(`ClickUp API Error: ${response.statusText}`);
+            }
+
             return await response.json();
         } catch (error) {
-            console.error("Failed to update ClickUp task:", error);
+            console.error(`Failed to update ClickUp task ${taskId}:`, error);
             throw error;
         }
     }

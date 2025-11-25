@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
 import { createClient, SupabaseClient, User, Session } from '@supabase/supabase-js';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, from } from 'rxjs';
+import { switchMap, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 
 // TODO: Move these to environment files in a real production app
 const SUPABASE_URL = 'https://ftikbxoypwcqlprfwxrf.supabase.co';
@@ -16,6 +17,7 @@ export class AuthService {
   private _currentUser = new BehaviorSubject<User | null>(null);
   private _userRole = new BehaviorSubject<'admin' | 'employee' | null>(null);
   private _userTeam = new BehaviorSubject<string | null>(null);
+  private _userProfile = new BehaviorSubject<any>(null);
   private _loading = new BehaviorSubject<boolean>(true);
   private apiUrl = 'http://localhost:3000/api';
 
@@ -50,6 +52,10 @@ export class AuthService {
     return this._userTeam.asObservable();
   }
 
+  get userProfile$(): Observable<any> {
+    return this._userProfile.asObservable();
+  }
+
   get currentUserValue(): User | null {
     return this._currentUser.value;
   }
@@ -71,6 +77,7 @@ export class AuthService {
       this._currentUser.next(null);
       this._userRole.next(null);
       this._userTeam.next(null);
+      this._userProfile.next(null);
     }
   }
 
@@ -82,11 +89,13 @@ export class AuthService {
         console.log('[AuthService] Fetched profile:', user);
         this._userRole.next(user.role);
         this._userTeam.next(user.team_name || null);
+        this._userProfile.next(user);
       },
       error: (err) => {
         console.error('[AuthService] Failed to fetch profile', err);
         this._userRole.next('employee');
         this._userTeam.next(null);
+        this._userProfile.next(null);
       }
     });
   }
@@ -110,5 +119,38 @@ export class AuthService {
   async signOut() {
     await this.supabase.auth.signOut();
     this.router.navigate(['/login']);
+  }
+
+  // Update Profile
+  updateProfile(data: { name: string }): Observable<any> {
+    return new Observable(observer => {
+      this.getToken().then(token => {
+        if (!token) {
+          observer.error('No token');
+          return;
+        }
+        this.http.put(`${this.apiUrl}/users/me`, data, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).subscribe({
+          next: (updatedUser: any) => {
+            // Refresh profile
+            this.fetchUserRole(token);
+            observer.next(updatedUser);
+            observer.complete();
+          },
+          error: (err) => observer.error(err)
+        });
+      });
+    });
+  }
+
+  // Get Full Profile
+  getProfile(): Observable<any> {
+    return from(this.getToken()).pipe(
+      switchMap(token => {
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+        return this.http.get<any>(`${this.apiUrl}/users/me`, { headers });
+      })
+    );
   }
 }

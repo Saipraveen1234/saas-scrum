@@ -1,6 +1,8 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { StandupService } from '../standup.service';
+
+import { FormsModule } from '@angular/forms';
+import { StandupService, Standup } from '../standup.service';
 import { AuthService } from '../auth.service';
 import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
@@ -28,55 +30,85 @@ export class DashboardComponent implements OnInit {
   todayStats = {
     totalUpdates: 0,
     blockers: 0,
-    completionRate: 0,
-    teamMembers: 0
+    completionRate: 100,
   };
 
-  // Mock Data for New Widgets
-  sprintStatus = {
-    name: 'Sprint 23',
-    goal: 'Implement User Authentication & Team Management',
-    daysRemaining: 4,
-    totalDays: 10,
-    progress: 60
-  };
+  // New Metrics
+  sprint: any = null;
+  burnupData: any[] = [];
+  risk: any = null;
+  velocityData: any[] = [];
 
-  burndownData = [
-    { day: 1, ideal: 100, actual: 100 },
-    { day: 2, ideal: 90, actual: 95 },
-    { day: 3, ideal: 80, actual: 85 },
-    { day: 4, ideal: 70, actual: 72 },
-    { day: 5, ideal: 60, actual: 55 },
-    { day: 6, ideal: 50, actual: 45 }, // Current
-    { day: 7, ideal: 40, actual: null },
-    { day: 8, ideal: 30, actual: null },
-    { day: 9, ideal: 20, actual: null },
-    { day: 10, ideal: 10, actual: null }
-  ];
+  // Chart Helpers
+  maxBurnupPoints = 100;
+  burnupPath = '';
+  velocityMax = 0;
+  velocityChange = 0;
 
-  velocity = {
-    current: 24,
-    average: 22,
-    trend: 'up' // 'up', 'down', 'stable'
-  };
-
-  activeBlockers = [
-    { id: 1, description: 'Waiting for API Access', owner: 'Sarah', age: 2 },
-    { id: 2, description: 'DB Schema conflict', owner: 'Mike', age: 1 }
-  ];
-
-  aiTips = [
-    "Consider breaking down task #124 into smaller subtasks.",
-    "Team velocity is trending up! Great job.",
-    "Reminder: 3 days left in the sprint."
-  ];
+  private standupService = inject(StandupService);
+  private authService = inject(AuthService);
 
   ngOnInit() {
     this.loadData();
     this.loadTeamCount();
+    this.loadSprintMetrics();
+  }
 
-    this.authService.userTeam$.subscribe(team => this.userTeam = team);
-    this.authService.userRole$.subscribe(role => this.userRole = role);
+  loadSprintMetrics() {
+    this.standupService.getSprintCurrent().subscribe({
+      next: (res) => this.sprint = res,
+      error: (err) => console.error('Sprint fetch failed', err)
+    });
+
+    this.standupService.getSprintBurnup().subscribe({
+      next: (res) => {
+        this.burnupData = res;
+        this.calculateBurnupPath();
+      },
+      error: (err) => console.error('Burnup fetch failed', err)
+    });
+
+    this.standupService.getSprintRisk().subscribe({
+      next: (res) => this.risk = res,
+      error: (err) => console.error('Risk fetch failed', err)
+    });
+
+    this.standupService.getSprintVelocity().subscribe({
+      next: (res) => {
+        this.velocityData = res;
+        this.velocityMax = Math.max(...res.map((v: any) => v.points_completed), 10);
+
+        // Calculate change vs previous
+        if (this.velocityData.length >= 2) {
+          const current = this.velocityData[this.velocityData.length - 1].points_completed;
+          const previous = this.velocityData[this.velocityData.length - 2].points_completed;
+          if (previous > 0) {
+            this.velocityChange = Math.round(((current - previous) / previous) * 100);
+          }
+        }
+      },
+      error: (err) => console.error('Velocity fetch failed', err)
+    });
+  }
+
+  calculateBurnupPath() {
+    if (!this.burnupData.length) return;
+
+    // Simple SVG path calculation
+    // Assuming 100% width and height for the chart area
+    // X axis: date (index), Y axis: points
+
+    const width = 100;
+    const height = 100;
+    this.maxBurnupPoints = Math.max(...this.burnupData.map(d => d.total_points), 100);
+
+    const points = this.burnupData.map((d, i) => {
+      const x = (i / (this.burnupData.length - 1)) * width;
+      const y = height - ((d.completed_points / this.maxBurnupPoints) * height);
+      return `${x},${y}`;
+    });
+
+    this.burnupPath = `M ${points.join(' L ')}`;
   }
 
   loadTeamCount() {

@@ -84,4 +84,70 @@ export class StandupService {
       })
     );
   }
+
+  updateTaskStatus(taskId: string, status: string): Observable<any> {
+    return from(this.authService.getToken()).pipe(
+      switchMap(token => {
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+        return this.http.put<any>(`${this.apiUrl}/tasks/${taskId}/status`, { status }, { headers });
+      })
+    );
+  }
+
+  // --- Sprint Metrics ---
+
+  getSprintCurrent(): Observable<any> {
+    return from(this.authService.getToken()).pipe(
+      switchMap(token => {
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+        return this.http.get<any>(`${this.apiUrl}/sprint/current`, { headers });
+      })
+    );
+  }
+
+  getSprintBurnup(): Observable<any[]> {
+    return from(this.authService.getToken()).pipe(
+      switchMap(token => {
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+        return this.http.get<any[]>(`${this.apiUrl}/sprint/burnup`, { headers });
+      })
+    );
+  }
+
+  getSprintRisk(): Observable<any> {
+    return from(this.authService.getToken()).pipe(
+      switchMap(token => {
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+        return this.http.get<any>(`${this.apiUrl}/sprint/risk`, { headers });
+      })
+    );
+  }
+
+  analyzeSprintRisk(): Observable<any> {
+    return from(this.authService.getToken()).pipe(
+      switchMap(token => {
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+        return this.http.post<any>(`${this.apiUrl}/sprint/analyze-risk`, {}, { headers });
+      })
+    );
+  }
+
+  getSprintVelocity(): Observable<any[]> {
+    return from(this.authService.getToken()).pipe(
+      switchMap(token => {
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+        return this.http.get<any[]>(`${this.apiUrl}/sprint/velocity`, { headers });
+      })
+    );
+  }
+
+  // 8. Chat with AI
+  sendChatMessage(message: string): Observable<{ response: string }> {
+    return from(this.authService.getToken()).pipe(
+      switchMap(token => {
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+        return this.http.post<{ response: string }>(`${this.apiUrl}/chat`, { message }, { headers });
+      })
+    );
+  }
 }

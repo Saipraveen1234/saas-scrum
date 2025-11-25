@@ -1,12 +1,13 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { StandupService } from '../standup.service';
 import { AuthService } from '../auth.service';
 
 @Component({
   selector: 'app-tasks',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="max-w-7xl mx-auto space-y-8">
       <!-- Header -->
@@ -65,9 +66,24 @@ import { AuthService } from '../auth.service';
 
           <div class="flex justify-between items-start mb-4 pl-2">
              <span class="text-xs font-mono text-slate-400">#{{ task.id }}</span>
-             <span [class]="'px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wide ' + getStatusColor(task.status.status)">
-               {{ task.status.status }}
-             </span>
+             <span class="text-xs font-mono text-slate-400">#{{ task.id }}</span>
+             <div class="relative" (click)="$event.stopPropagation()">
+               <select 
+                 [ngModel]="task.status.status" 
+                 (ngModelChange)="updateStatus(task, $event)"
+                 class="appearance-none pl-3 pr-8 py-1 rounded-full text-xs font-semibold uppercase tracking-wide border-0 cursor-pointer focus:ring-2 focus:ring-indigo-500 outline-none transition-colors"
+                 [ngClass]="getStatusColor(task.status.status)">
+                 <option value="to do" class="bg-white text-slate-900">To Do</option>
+                 <option value="in progress" class="bg-white text-slate-900">In Progress</option>
+                 <option value="review" class="bg-white text-slate-900">Review</option>
+                 <option value="complete" class="bg-white text-slate-900">Complete</option>
+               </select>
+               <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-current opacity-50">
+                 <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                 </svg>
+               </div>
+             </div>
           </div>
 
           <h3 class="text-lg font-semibold text-slate-900 mb-3 pl-2 group-hover:text-indigo-600 transition-colors line-clamp-2 min-h-[3.5rem]">
@@ -130,6 +146,24 @@ export class TasksComponent implements OnInit {
 
   ngOnInit() {
     this.loadTasks();
+  }
+
+  updateStatus(task: any, newStatus: string) {
+    const oldStatus = task.status.status;
+    // Optimistic update
+    task.status.status = newStatus;
+    
+    this.standupService.updateTaskStatus(task.id, newStatus).subscribe({
+      next: () => {
+        console.log(`Task ${task.id} updated to ${newStatus}`);
+      },
+      error: (err) => {
+        console.error('Failed to update task status', err);
+        // Revert on error
+        task.status.status = oldStatus;
+        alert('Failed to update status');
+      }
+    });
   }
 
   toggleView() {

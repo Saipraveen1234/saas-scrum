@@ -22,6 +22,7 @@ export interface AuthRequest extends Request {
   user?: {
     id: string;
     email: string;
+    name?: string;
     role: 'admin' | 'employee';
     team_id?: number | null;
     team_name?: string | null;
@@ -44,7 +45,7 @@ export const authMiddleware = (dbClient: Client) => async (req: Request, res: Re
 
     // Fetch role and team from DB
     const roleResult = await dbClient.query(`
-      SELECT ur.role, ur.team_id, t.name as team_name 
+      SELECT ur.role, ur.name, ur.team_id, t.name as team_name 
       FROM user_roles ur 
       LEFT JOIN teams t ON ur.team_id = t.id 
       WHERE ur.user_id = $1
@@ -62,17 +63,26 @@ export const authMiddleware = (dbClient: Client) => async (req: Request, res: Re
       team_id = row.team_id;
       team_name = row.team_name;
       console.log(`[AuthMiddleware] Role: ${role}, Team: ${team_name}`);
+      
+      (req as AuthRequest).user = {
+        id: user.id,
+        email: user.email || '',
+        name: row.name || user.email?.split('@')[0] || 'User',
+        role: role,
+        team_id: team_id,
+        team_name: team_name
+      };
     } else {
       console.log(`[AuthMiddleware] No role found in DB, defaulting to: ${role}`);
+      (req as AuthRequest).user = {
+        id: user.id,
+        email: user.email || '',
+        name: user.email?.split('@')[0] || 'User',
+        role: role,
+        team_id: team_id,
+        team_name: team_name
+      };
     }
-
-    (req as AuthRequest).user = {
-      id: user.id,
-      email: user.email || '',
-      role: role,
-      team_id: team_id,
-      team_name: team_name
-    };
 
     next();
   } catch (err) {
