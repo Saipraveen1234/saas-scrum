@@ -38,4 +38,31 @@ export class ClickUpService {
             throw error;
         }
     }
+
+    async updateTaskStatus(taskId: string, status: string): Promise<any> {
+        if (!this.apiKey) return null;
+
+        try {
+            const response = await fetch(
+                `${CLICKUP_API_URL}/task/${taskId}`,
+                {
+                    method: "PUT",
+                    headers: {
+                        Authorization: this.apiKey,
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ status })
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`ClickUp API Error: ${response.statusText}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error(`Failed to update ClickUp task ${taskId}:`, error);
+            throw error;
+        }
+    }
 }

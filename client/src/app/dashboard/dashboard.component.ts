@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+
 import { FormsModule } from '@angular/forms';
 import { StandupService, Standup } from '../standup.service';
 import { AuthService } from '../auth.service';
@@ -10,7 +10,7 @@ import { MarkdownPipe } from '../pipes/markdown.pipe';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, MarkdownPipe],
+  imports: [CommonModule, FormsModule, MarkdownPipe],
   templateUrl: './dashboard.component.html',
 })
 export class DashboardComponent implements OnInit {
@@ -29,6 +29,18 @@ export class DashboardComponent implements OnInit {
     completionRate: 100,
   };
 
+  // New Metrics
+  sprint: any = null;
+  burnupData: any[] = [];
+  risk: any = null;
+  velocityData: any[] = [];
+  
+  // Chart Helpers
+  maxBurnupPoints = 100;
+  burnupPath = '';
+  velocityMax = 0;
+  velocityChange = 0;
+
   private standupService = inject(StandupService);
   private authService = inject(AuthService);
 
@@ -42,6 +54,64 @@ export class DashboardComponent implements OnInit {
     this.setToday();
     this.loadData();
     this.loadTeamCount();
+    this.loadSprintMetrics();
+  }
+
+  loadSprintMetrics() {
+    this.standupService.getSprintCurrent().subscribe({
+      next: (res) => this.sprint = res,
+      error: (err) => console.error('Sprint fetch failed', err)
+    });
+
+    this.standupService.getSprintBurnup().subscribe({
+      next: (res) => {
+        this.burnupData = res;
+        this.calculateBurnupPath();
+      },
+      error: (err) => console.error('Burnup fetch failed', err)
+    });
+
+    this.standupService.getSprintRisk().subscribe({
+      next: (res) => this.risk = res,
+      error: (err) => console.error('Risk fetch failed', err)
+    });
+
+    this.standupService.getSprintVelocity().subscribe({
+      next: (res) => {
+        this.velocityData = res;
+        this.velocityMax = Math.max(...res.map((v: any) => v.points_completed), 10);
+        
+        // Calculate change vs previous
+        if (this.velocityData.length >= 2) {
+          const current = this.velocityData[this.velocityData.length - 1].points_completed;
+          const previous = this.velocityData[this.velocityData.length - 2].points_completed;
+          if (previous > 0) {
+            this.velocityChange = Math.round(((current - previous) / previous) * 100);
+          }
+        }
+      },
+      error: (err) => console.error('Velocity fetch failed', err)
+    });
+  }
+
+  calculateBurnupPath() {
+    if (!this.burnupData.length) return;
+    
+    // Simple SVG path calculation
+    // Assuming 100% width and height for the chart area
+    // X axis: date (index), Y axis: points
+    
+    const width = 100;
+    const height = 100;
+    this.maxBurnupPoints = Math.max(...this.burnupData.map(d => d.total_points), 100);
+    
+    const points = this.burnupData.map((d, i) => {
+      const x = (i / (this.burnupData.length - 1)) * width;
+      const y = height - ((d.completed_points / this.maxBurnupPoints) * height);
+      return `${x},${y}`;
+    });
+
+    this.burnupPath = `M ${points.join(' L ')}`;
   }
 
   loadTeamCount() {

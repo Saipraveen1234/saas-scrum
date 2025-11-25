@@ -59,6 +59,27 @@ app.get("/api/standups", authMiddleware(dbClient), async (req: Request, res: Res
   }
 });
 
+// 11. UPDATE TASK STATUS
+app.put("/api/tasks/:id/status", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    const user = (req as AuthRequest).user;
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+    const taskId = req.params.id;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ error: "Status is required" });
+    }
+
+    const result = await clickupService.updateTaskStatus(taskId, status);
+    res.json(result);
+  } catch (error) {
+    console.error("Update task status failed:", error);
+    res.status(500).json({ error: "Failed to update task status" });
+  }
+});
+
 // 2. POST STANDUP
 app.post("/api/standups", authMiddleware(dbClient), async (req: Request, res: Response) => {
   try {
@@ -78,7 +99,64 @@ app.post("/api/standups", authMiddleware(dbClient), async (req: Request, res: Re
     `,
       [user_name, yesterday, today, blockers, user.id]
     );
-    res.status(201).json(result.rows[0]);
+    const savedStandup = result.rows[0];
+
+    // --- AUTO-UPDATE TICKETS ---
+    let updatedTasks: any[] = [];
+    try {
+      const listId = process.env.CLICKUP_LIST_ID;
+      if (listId) {
+        const allTasks = await clickupService.getTasks(listId);
+        // Filter tasks assigned to user
+        const myTasks = allTasks.filter((task: any) => 
+          task.assignees?.some((a: any) => a.email === user.email)
+        );
+
+        if (myTasks.length > 0) {
+          const taskSummary = myTasks.map((t: any) => 
+            `- ID: ${t.id}, Name: "${t.name}", Status: ${t.status.status}`
+          ).join('\n');
+
+          const prompt = `
+            You are an AI assistant that manages task statuses.
+            
+            User's Standup Update:
+            Yesterday: "${yesterday}"
+            Today: "${today}"
+            
+            User's Assigned Tasks:
+            ${taskSummary}
+            
+            Based on the update, identify if any tasks should be marked as "Closed" or "Complete".
+            Only mark a task as complete if the user explicitly says they finished, completed, or done with it.
+            
+            Return a JSON array of objects with "taskId" and "newStatus" (use "closed" for completion).
+            If no tasks are completed, return an empty array [].
+            Example: [{"taskId": "123", "newStatus": "closed"}]
+          `;
+
+          const aiResult = await model.generateContent(prompt);
+          const text = aiResult.response.text();
+          const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+          const updates = JSON.parse(jsonStr);
+
+          if (Array.isArray(updates) && updates.length > 0) {
+            for (const update of updates) {
+              if (update.taskId && update.newStatus) {
+                await clickupService.updateTaskStatus(update.taskId, update.newStatus);
+                updatedTasks.push(update);
+                console.log(`[AutoUpdate] Task ${update.taskId} marked as ${update.newStatus}`);
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Auto-update tickets failed:", err);
+      // Don't fail the request if this part fails
+    }
+
+    res.status(201).json({ ...savedStandup, updatedTasks });
   } catch (error) {
     res.status(500).json({ error: "Save failed" });
   }
@@ -148,6 +226,50 @@ app.get("/api/users/me", authMiddleware(dbClient), async (req: Request, res: Res
     res.json(user);
   } catch (error) {
     res.status(500).json({ error: "Fetch me failed" });
+  }
+});
+
+// 8.6 UPDATE CURRENT USER
+app.put("/api/users/me", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    const user = (req as AuthRequest).user;
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+    const { name } = req.body;
+    
+    // Update user_roles table
+    // We assume user_roles has a 'name' column. If not, we need to add it or update where appropriate.
+    // Based on previous context, user_roles has 'name'.
+    
+    const result = await dbClient.query(
+      "UPDATE user_roles SET name = $1 WHERE user_id = $2 RETURNING *",
+      [name, user.id]
+    );
+
+    if (result.rowCount === 0) {
+      // If user not in user_roles yet (weird but possible if authMiddleware creates mock), insert?
+      // For now assume they exist.
+      return res.status(404).json({ error: "User not found" });
+    }
+    
+    // Return updated user info merged with existing role/team info
+    // Actually we can just return what we updated or fetch fresh.
+    // Let's return the updated row.
+    const updated = result.rows[0];
+    
+    // We need to return the full user object structure expected by frontend
+    // Re-fetch full details to be safe
+    const fullUserRes = await dbClient.query(`
+      SELECT ur.user_id, ur.email, ur.name, ur.role, ur.team_id, t.name as team_name
+      FROM user_roles ur
+      LEFT JOIN teams t ON ur.team_id = t.id
+      WHERE ur.user_id = $1
+    `, [user.id]);
+    
+    res.json(fullUserRes.rows[0]);
+  } catch (error) {
+    console.error("Update user failed:", error);
+    res.status(500).json({ error: "Update failed" });
   }
 });
 
@@ -244,24 +366,17 @@ app.get("/api/tasks", authMiddleware(dbClient), async (req: Request, res: Respon
     if (!user) return res.status(401).json({ error: "Unauthorized" });
 
     const listId = process.env.CLICKUP_LIST_ID;
-    console.log(`[API] Checking Env Vars - List ID: ${listId ? 'Set' : 'Missing'}, API Key: ${process.env.CLICKUP_API_KEY ? 'Set' : 'Missing'}`);
-
+    
     if (!listId) {
-      console.error("[API] Error: CLICKUP_LIST_ID is not set in environment variables.");
       return res.json([]);
     }
 
-    console.log(`[API] Fetching tasks for user: ${user.email}`);
-    console.log(`[API] Using ClickUp List ID: ${listId}`);
-
     const allTasks = await clickupService.getTasks(listId);
-    console.log(`[API] Fetched ${allTasks.length} tasks from ClickUp`);
-
+    
     // Check if admin wants all tasks
     const showAll = req.query.all === 'true';
 
     if (showAll && user.role === 'admin') {
-      console.log(`[API] Admin ${user.email} requesting ALL tasks`);
       return res.json(allTasks);
     }
 
@@ -271,11 +386,223 @@ app.get("/api/tasks", authMiddleware(dbClient), async (req: Request, res: Respon
       return assignees.some((assignee: any) => assignee.email === user.email);
     });
 
-    console.log(`[API] Found ${myTasks.length} tasks for user ${user.email}`);
     res.json(myTasks);
   } catch (error) {
     console.error("Fetch tasks failed:", error);
     res.status(500).json({ error: "Fetch tasks failed" });
+  }
+});
+
+// --- SPRINT METRICS ROUTES ---
+
+// 11. GET CURRENT SPRINT
+app.get("/api/sprint/current", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    // Get active sprint
+    const sprintRes = await dbClient.query("SELECT * FROM sprints WHERE status = 'active' LIMIT 1");
+    if (sprintRes.rowCount === 0) {
+      return res.status(404).json({ error: "No active sprint" });
+    }
+    const sprint = sprintRes.rows[0];
+
+    // Calculate progress based on dates for now, or use tasks if available
+    const start = new Date(sprint.start_date).getTime();
+    const end = new Date(sprint.end_date).getTime();
+    const now = new Date().getTime();
+    const totalDuration = end - start;
+    const elapsed = now - start;
+    let timeProgress = Math.round((elapsed / totalDuration) * 100);
+    timeProgress = Math.max(0, Math.min(100, timeProgress));
+
+    // Get scope change (mock logic or real if we tracked added tasks)
+    // For now, we'll return 0 as we don't have task history tracking yet
+    const scopeChange = 0;
+
+    res.json({
+      ...sprint,
+      progress: timeProgress,
+      scopeChange: scopeChange
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Fetch sprint failed" });
+  }
+});
+
+// 12. GET BURNUP DATA
+app.get("/api/sprint/burnup", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    const sprintRes = await dbClient.query("SELECT id FROM sprints WHERE status = 'active' LIMIT 1");
+    if (sprintRes.rowCount === 0) return res.json([]);
+    const sprintId = sprintRes.rows[0].id;
+
+    const result = await dbClient.query(`
+      SELECT * FROM sprint_snapshots 
+      WHERE sprint_id = $1 
+      ORDER BY date ASC
+    `, [sprintId]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: "Fetch burnup failed" });
+  }
+});
+
+// 13. GET SPRINT RISK
+app.get("/api/sprint/risk", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    const sprintRes = await dbClient.query("SELECT id FROM sprints WHERE status = 'active' LIMIT 1");
+    if (sprintRes.rowCount === 0) return res.json(null);
+    const sprintId = sprintRes.rows[0].id;
+
+    const result = await dbClient.query(`
+      SELECT * FROM sprint_risks 
+      WHERE sprint_id = $1 
+      ORDER BY created_at DESC LIMIT 1
+    `, [sprintId]);
+    
+    res.json(result.rows[0] || null);
+  } catch (error) {
+    res.status(500).json({ error: "Fetch risk failed" });
+  }
+});
+
+// 14. ANALYZE RISK (AI)
+app.post("/api/sprint/analyze-risk", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    const sprintRes = await dbClient.query("SELECT * FROM sprints WHERE status = 'active' LIMIT 1");
+    if (sprintRes.rowCount === 0) return res.status(404).json({ error: "No active sprint" });
+    const sprint = sprintRes.rows[0];
+
+    // Fetch recent standups and blockers
+    const standupsRes = await dbClient.query(`
+      SELECT * FROM standups 
+      WHERE created_at >= $1 
+      ORDER BY created_at DESC LIMIT 20
+    `, [sprint.start_date]);
+
+    // Construct prompt
+    const updates = standupsRes.rows.map((u: any) => 
+      `- ${u.user_name}: ${u.today} (Blockers: ${u.blockers})`
+    ).join("\n");
+
+    const prompt = `
+      Analyze the risk of the current sprint based on these recent updates.
+      Sprint Goal: ${sprint.goal}
+      Updates:
+      ${updates}
+
+      Return a JSON object with:
+      - risk_score (0-100, where 100 is high risk)
+      - risk_level (Low, Moderate, High, Critical)
+      - analysis (Short summary of why)
+    `;
+
+    const aiResult = await model.generateContent(prompt);
+    const text = aiResult.response.text();
+    
+    // Clean up JSON
+    const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const analysis = JSON.parse(jsonStr);
+
+    // Save to DB
+    const saved = await dbClient.query(`
+      INSERT INTO sprint_risks (sprint_id, risk_score, risk_level, analysis)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
+    `, [sprint.id, analysis.risk_score, analysis.risk_level, analysis.analysis]);
+
+    res.json(saved.rows[0]);
+  } catch (error) {
+    console.error("Risk analysis failed:", error);
+    res.status(500).json({ error: "Risk analysis failed" });
+  }
+});
+
+// 15. GET VELOCITY
+app.get("/api/sprint/velocity", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    const result = await dbClient.query("SELECT * FROM velocity_history ORDER BY id DESC LIMIT 5");
+    res.json(result.rows.reverse()); // Return in chronological order
+  } catch (error) {
+    res.status(500).json({ error: "Fetch velocity failed" });
+  }
+});
+
+// 16. CHAT WITH AI SCRUM ASSISTANT
+app.post("/api/chat", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    const user = (req as AuthRequest).user;
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+    const { message } = req.body;
+    if (!message) return res.status(400).json({ error: "Message required" });
+
+    // 1. Gather Context
+    let context = `User: ${user.name} (${user.role})`;
+    if (user.team_name) context += `, Team: ${user.team_name}`;
+
+    const sprintRes = await dbClient.query("SELECT * FROM sprints WHERE status = 'active' LIMIT 1");
+    if (sprintRes.rowCount && sprintRes.rowCount > 0) {
+      const sprint = sprintRes.rows[0];
+      context += `\nCurrent Sprint: ${sprint.name}, Goal: ${sprint.goal}`;
+    }
+
+    // Fetch Tasks (if relevant)
+    // Simple heuristic: if message contains keywords, fetch tasks
+    const lowerMsg = message.toLowerCase();
+    if (lowerMsg.includes('task') || lowerMsg.includes('todo') || lowerMsg.includes('pending') || lowerMsg.includes('work') || lowerMsg.includes('ticket') || lowerMsg.includes('issue')) {
+      const listId = process.env.CLICKUP_LIST_ID;
+      if (listId) {
+        const allTasks = await clickupService.getTasks(listId);
+        let relevantTasks = allTasks;
+        
+        // If employee, filter to their tasks unless they ask for "team" or "all"
+        if (user.role === 'employee' && !lowerMsg.includes('team') && !lowerMsg.includes('all')) {
+          relevantTasks = allTasks.filter((task: any) => 
+            task.assignees?.some((a: any) => a.email === user.email)
+          );
+        }
+        
+        const taskSummary = relevantTasks.map((t: any) => 
+          `- ${t.name} (Status: ${t.status.status}) [Assignees: ${t.assignees.map((a: any) => a.username).join(', ')}]`
+        ).join('\n');
+        
+        context += `\n\nRelevant Tasks:\n${taskSummary}`;
+      }
+    }
+
+    // Fetch Standups (if relevant)
+    if (lowerMsg.includes('standup') || lowerMsg.includes('update') || lowerMsg.includes('blocker')) {
+       const standupsRes = await dbClient.query("SELECT * FROM standups ORDER BY created_at DESC LIMIT 20");
+       const standupSummary = standupsRes.rows.map((s: any) => 
+         `- ${s.user_name}: ${s.today} (Blockers: ${s.blockers})`
+       ).join('\n');
+       context += `\n\nRecent Standups:\n${standupSummary}`;
+    }
+
+    // 2. Construct Prompt
+    const prompt = `
+      You are an AI Scrum Assistant for Velos AI.
+      Your goal is to help the user (${user.name}, ${user.role}) with their daily work and sprint progress.
+      
+      Context Data:
+      ${context}
+
+      User Question: "${message}"
+
+      Answer the user's question concisely and helpfully based on the context provided.
+      If you don't have the info, say so.
+      Format your response in Markdown.
+    `;
+
+    // 3. Call Gemini
+    const result = await model.generateContent(prompt);
+    const response = result.response.text();
+
+    res.json({ response });
+  } catch (error) {
+    console.error("Chat failed:", error);
+    res.status(500).json({ error: "Chat failed" });
   }
 });
 
