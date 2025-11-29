@@ -1,0 +1,344 @@
+<div class="max-w-7xl mx-auto space-y-8 p-6">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-3xl font-bold text-slate-900 tracking-tight">
+                {{ showAllTasks ? 'Team Tasks' : 'My Tasks' }}
+            </h2>
+            <p class="text-slate-500 mt-1">Synced from ClickUp • {{ tasks.length }} active tasks</p>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex items-center gap-3">
+            <!-- Admin Toggle -->
+            <button *ngIf="(authService.userRole$ | async) === 'admin'" (click)="toggleView()"
+                class="px-4 py-2 rounded-lg text-sm font-medium transition-colors border"
+                [class.bg-slate-900]="showAllTasks" [class.text-white]="showAllTasks"
+                [class.border-slate-900]="showAllTasks" [class.bg-white]="!showAllTasks"
+                [class.text-slate-700]="!showAllTasks" [class.border-slate-200]="!showAllTasks">
+                {{ showAllTasks ? 'View My Tasks' : 'View Team Tasks' }}
+            </button>
+
+            <div
+                class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-600 shadow-sm">
+                Sorted by Due Date
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div *ngFor="let i of [1,2,3,4,5,6]" class="h-48 bg-white rounded-xl border border-slate-200 animate-pulse">
+        </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!isLoading && tasks.length === 0"
+        class="text-center py-20 bg-white rounded-2xl border border-slate-200 border-dashed">
+        <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-slate-900">All caught up!</h3>
+        <p class="text-slate-500">No tasks found.</p>
+    </div>
+
+    <!-- Tasks Grid -->
+    <div *ngIf="!isLoading && tasks.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div *ngFor="let task of tasks" (click)="openTaskDetail(task)"
+            class="group bg-white rounded-xl border border-slate-200 p-6 hover:shadow-lg hover:border-indigo-200 transition-all duration-300 relative overflow-hidden cursor-pointer">
+
+            <!-- Status Line (Left Border) -->
+            <div [class]="'absolute left-0 top-0 bottom-0 w-1 ' + getStatusColor(task.status.status, true)"></div>
+
+            <div class="flex justify-between items-start mb-4 pl-2">
+                <span class="text-xs font-mono text-slate-400">#{{ task.id }}</span>
+                <div class="relative" (click)="$event.stopPropagation()">
+                    <select [ngModel]="task.status.status" (ngModelChange)="updateStatus(task, $event)"
+                        class="appearance-none pl-3 pr-8 py-1 rounded-full text-xs font-semibold uppercase tracking-wide border-0 cursor-pointer focus:ring-2 focus:ring-indigo-500 outline-none transition-colors"
+                        [ngClass]="getStatusColor(task.status.status)">
+                        <option value="to do" class="bg-white text-slate-900">To Do</option>
+                        <option value="in progress" class="bg-white text-slate-900">In Progress</option>
+                        <option value="review" class="bg-white text-slate-900">Review</option>
+                        <option value="complete" class="bg-white text-slate-900">Complete</option>
+                    </select>
+                    <div
+                        class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-current opacity-50">
+                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <h3
+                class="text-lg font-semibold text-slate-900 mb-3 pl-2 group-hover:text-indigo-600 transition-colors line-clamp-2 min-h-[3.5rem]">
+                {{ task.name }}
+            </h3>
+
+            <div class="pl-2 space-y-3">
+                <!-- Assignees (Only show in Team View) -->
+                <div *ngIf="showAllTasks && task.assignees?.length > 0" class="flex items-center gap-2 mb-2">
+                    <div class="flex -space-x-2 overflow-hidden">
+                        <div *ngFor="let assignee of task.assignees"
+                            class="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600"
+                            [title]="assignee.username">
+                            {{ assignee.username?.charAt(0) | uppercase }}
+                        </div>
+                    </div>
+                    <span class="text-xs text-slate-500">{{ task.assignees[0].username }}</span>
+                </div>
+
+                <!-- Priority -->
+                <div class="flex items-center gap-2 text-sm">
+                    <div [class]="'w-2 h-2 rounded-full ' + getPriorityColor(task.priority?.priority)"></div>
+                    <span class="text-slate-600 font-medium">
+                        {{ (task.priority?.priority | titlecase) || 'Normal Priority' }}
+                    </span>
+                </div>
+
+                <!-- Due Date -->
+                <div class="flex items-center gap-2 text-sm text-slate-500">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span [class.text-red-600]="isOverdue(task.due_date)">
+                        {{ task.due_date ? (task.due_date | date:'mediumDate') : 'No Due Date' }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Action / Footer -->
+            <div class="mt-6 pt-4 border-t border-slate-100 flex justify-end pl-2">
+                <span class="text-sm font-medium text-indigo-600 group-hover:text-indigo-800 flex items-center gap-1">
+                    View Details
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Task Detail Modal -->
+<div *ngIf="selectedTask" class="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true">
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" (click)="closeTaskDetail()"></div>
+
+    <!-- Slide-over Panel -->
+    <div
+        class="relative w-full max-w-2xl bg-[#1e1e1e] text-slate-300 shadow-2xl h-full overflow-y-auto flex flex-col animate-slide-in-right">
+
+        <!-- Header -->
+        <div class="p-6 border-b border-white/10 flex justify-between items-start">
+            <div class="flex-1">
+                <div class="flex items-center gap-3 mb-2">
+                    <span
+                        class="px-2 py-0.5 rounded text-xs font-medium bg-white/10 text-slate-400 border border-white/5">
+                        Task
+                    </span>
+                    <span class="text-sm font-mono text-slate-500">{{ selectedTask.id }}</span>
+                    <button
+                        class="px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center gap-1 hover:bg-purple-500/30 transition-colors">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                        </svg>
+                        Ask AI
+                    </button>
+                </div>
+                <h2 class="text-2xl font-bold text-white">{{ selectedTask.name }}</h2>
+            </div>
+            <button (click)="closeTaskDetail()" class="text-slate-500 hover:text-white transition-colors p-1">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- AI Input Placeholder -->
+        <div class="px-6 py-4 border-b border-white/10">
+            <div
+                class="bg-white/5 rounded-lg p-3 flex items-center gap-3 text-sm text-slate-400 cursor-text hover:bg-white/10 transition-colors">
+                <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <span>Ask Brain to write a description, create a summary or find similar tasks</span>
+            </div>
+        </div>
+
+        <!-- Properties Grid -->
+        <div class="p-6 grid grid-cols-2 gap-x-8 gap-y-6 border-b border-white/10">
+
+            <!-- Status -->
+            <div class="flex items-center justify-between group">
+                <div class="flex items-center gap-2 text-sm text-slate-400 w-1/3">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Status
+                </div>
+                <div class="flex-1">
+                    <button
+                        class="flex items-center gap-2 px-3 py-1.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 text-xs font-bold uppercase tracking-wide hover:bg-blue-500/30 transition-colors">
+                        <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+                        {{ selectedTask.status.status }}
+                        <svg class="w-3 h-3 ml-auto opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Assignees -->
+            <div class="flex items-center justify-between group">
+                <div class="flex items-center gap-2 text-sm text-slate-400 w-1/3">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    Assignees
+                </div>
+                <div class="flex-1 flex items-center gap-2">
+                    <div *ngIf="selectedTask.assignees?.length; else noAssignee" class="flex -space-x-2">
+                        <div *ngFor="let assignee of selectedTask.assignees"
+                            class="h-6 w-6 rounded-full ring-2 ring-[#1e1e1e] bg-slate-600 flex items-center justify-center text-[10px] font-bold text-white"
+                            [title]="assignee.username">
+                            {{ assignee.username?.charAt(0) | uppercase }}
+                        </div>
+                    </div>
+                    <ng-template #noAssignee>
+                        <span class="text-sm text-slate-600 italic">Empty</span>
+                    </ng-template>
+                </div>
+            </div>
+
+            <!-- Dates -->
+            <div class="flex items-center justify-between group">
+                <div class="flex items-center gap-2 text-sm text-slate-400 w-1/3">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Dates
+                </div>
+                <div class="flex-1 text-sm text-slate-300">
+                    <span *ngIf="selectedTask.start_date" class="text-slate-500">{{ selectedTask.start_date |
+                        date:'shortDate' }}</span>
+                    <span *ngIf="selectedTask.start_date && selectedTask.due_date" class="mx-1 text-slate-600">→</span>
+                    <span *ngIf="selectedTask.due_date" [class.text-red-400]="isOverdue(selectedTask.due_date)">{{
+                        selectedTask.due_date | date:'mediumDate' }}</span>
+                    <span *ngIf="!selectedTask.due_date && !selectedTask.start_date"
+                        class="text-slate-600 italic">Empty</span>
+                </div>
+            </div>
+
+            <!-- Priority -->
+            <div class="flex items-center justify-between group">
+                <div class="flex items-center gap-2 text-sm text-slate-400 w-1/3">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                    </svg>
+                    Priority
+                </div>
+                <div class="flex-1 text-sm">
+                    <span *ngIf="selectedTask.priority"
+                        [class]="'px-2 py-0.5 rounded text-xs font-medium ' + getPriorityBadgeClass(selectedTask.priority.priority)">
+                        {{ selectedTask.priority.priority | titlecase }}
+                    </span>
+                    <span *ngIf="!selectedTask.priority" class="text-slate-600 italic">Empty</span>
+                </div>
+            </div>
+
+            <!-- Time Estimate -->
+            <div class="flex items-center justify-between group">
+                <div class="flex items-center gap-2 text-sm text-slate-400 w-1/3">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Time Estimate
+                </div>
+                <div class="flex-1 text-sm text-slate-600 italic">Empty</div>
+            </div>
+
+            <!-- Tags -->
+            <div class="flex items-center justify-between group">
+                <div class="flex items-center gap-2 text-sm text-slate-400 w-1/3">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                    Tags
+                </div>
+                <div class="flex-1 text-sm text-slate-600 italic">Empty</div>
+            </div>
+
+        </div>
+
+        <!-- Description -->
+        <div class="p-6 border-b border-white/10">
+            <div class="flex items-center gap-2 mb-3 text-sm font-medium text-slate-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
+                </svg>
+                Description
+            </div>
+            <div class="min-h-[100px] text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
+                {{ selectedTask.description || 'Add description...' }}
+            </div>
+            <div *ngIf="!selectedTask.description" class="mt-2 flex items-center gap-2">
+                <button class="text-xs flex items-center gap-1 text-purple-400 hover:text-purple-300 transition-colors">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Write with AI
+                </button>
+            </div>
+        </div>
+
+        <!-- Custom Fields -->
+        <div class="p-6 border-b border-white/10">
+            <h3 class="text-sm font-bold text-slate-200 mb-4">Custom Fields</h3>
+            <button
+                class="w-full py-2 border border-white/10 rounded-lg text-sm text-slate-400 hover:bg-white/5 transition-colors flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Create a field in this List
+            </button>
+        </div>
+
+        <!-- Subtasks -->
+        <div class="p-6 border-b border-white/10">
+            <h3 class="text-sm font-bold text-slate-200 mb-4">Add subtask</h3>
+            <button
+                class="w-full py-2 border border-white/10 rounded-lg text-sm text-slate-400 hover:bg-white/5 transition-colors flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Add Task
+            </button>
+        </div>
+
+        <!-- Checklists -->
+        <div class="p-6">
+            <h3 class="text-sm font-bold text-slate-200 mb-4">Checklists</h3>
+            <button
+                class="w-full py-2 border border-white/10 rounded-lg text-sm text-slate-400 hover:bg-white/5 transition-colors flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Create checklist
+            </button>
+        </div>
+
+    </div>
+</div>

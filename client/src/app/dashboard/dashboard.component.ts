@@ -1,10 +1,8 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
 import { FormsModule } from '@angular/forms';
 import { StandupService, Standup } from '../standup.service';
 import { AuthService } from '../auth.service';
-import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { MarkdownPipe } from '../pipes/markdown.pipe';
 
@@ -31,6 +29,7 @@ export class DashboardComponent implements OnInit {
     totalUpdates: 0,
     blockers: 0,
     completionRate: 100,
+    teamMembers: 0
   };
 
   // New Metrics
@@ -44,9 +43,6 @@ export class DashboardComponent implements OnInit {
   burnupPath = '';
   velocityMax = 0;
   velocityChange = 0;
-
-  private standupService = inject(StandupService);
-  private authService = inject(AuthService);
 
   ngOnInit() {
     this.loadData();
