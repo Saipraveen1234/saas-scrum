@@ -28,6 +28,7 @@ export class DashboardComponent implements OnInit {
     totalUpdates: 0,
     blockers: 0,
     completionRate: 100,
+    teamMembers: 0
   };
 
   // New Metrics
