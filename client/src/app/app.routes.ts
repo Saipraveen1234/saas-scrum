@@ -8,6 +8,7 @@ import { SprintPlanningComponent } from './sprint-planning/sprint-planning.compo
 import { ReportsComponent } from './reports/reports.component';
 import { LoginComponent } from './login/login.component';
 import { authGuard } from './auth.guard';
+import { TasksComponent } from './tasks/tasks.component';
 
 export const routes: Routes = [
     { path: 'login', component: LoginComponent },

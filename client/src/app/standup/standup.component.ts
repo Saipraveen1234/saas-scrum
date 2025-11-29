@@ -1,60 +1,75 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { StandupService, Standup } from '../standup.service';
+import { StandupService } from '../standup.service';
+import { AuthService } from '../auth.service';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-standup',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  templateUrl: './standup.component.html',
+  templateUrl: './standup.component.html'
 })
 export class StandupComponent implements OnInit {
-  standups: Standup[] = [];
-  filteredStandups: Standup[] = [];
+  standupService = inject(StandupService);
+  authService = inject(AuthService);
 
-  selectedDate: string = '';
+  updates: any[] = [];
+  summary: string = ''; // Editable summary
+  isLoading = false;
+  isPosting = false;
 
-  // Form Inputs - REMOVED for Read-Only View
-
-  private standupService = inject(StandupService);
+  // Input Form Data
+  formData = {
+    yesterday: '',
+    today: '',
+    blockers: ''
+  };
+  isSubmitting = false;
 
   ngOnInit() {
-    this.setToday();
-    this.loadData();
+    this.loadUpdates();
   }
 
-  loadData() {
-    this.standupService.getStandups().subscribe((data) => {
-      this.standups = data;
-      this.filterByDate();
-    });
+  async loadUpdates() {
+    this.updates = await firstValueFrom(this.standupService.getStandups());
   }
 
-  setToday() {
-    const today = new Date();
-    this.selectedDate = today.toISOString().split('T')[0];
-    this.filterByDate();
+  async submitStandup() {
+    if (!this.formData.yesterday || !this.formData.today) return;
+
+    this.isSubmitting = true;
+    try {
+      await firstValueFrom(this.standupService.postStandup(this.formData));
+      this.formData = { yesterday: '', today: '', blockers: '' }; // Reset
+      await this.loadUpdates(); // Refresh feed
+    } catch (err) {
+      console.error(err);
+      alert('Failed to submit update');
+    } finally {
+      this.isSubmitting = false;
+    }
   }
 
-  isToday(): boolean {
-    const today = new Date().toISOString().split('T')[0];
-    return this.selectedDate === today;
+  async generateSummary() {
+    this.isLoading = true;
+    try {
+      const result = await firstValueFrom(this.standupService.generateSummary(new Date().toISOString().split('T')[0]));
+      this.summary = result.summary;
+    } catch (error) {
+      console.error('Failed to generate summary', error);
+    } finally {
+      this.isLoading = false;
+    }
   }
 
-  onDateChange() {
-    this.filterByDate();
+  postToSlack() {
+    this.isPosting = true;
+    // Mock Slack Post
+    setTimeout(() => {
+      alert(`Posted summary to Slack channel #daily-standup!`);
+      this.isPosting = false;
+    }, 1000);
   }
-
-  filterByDate() {
-    if (!this.selectedDate) return;
-
-    this.filteredStandups = this.standups.filter((standup) => {
-      if (!standup.created_at) return false;
-      const standupDate = new Date(standup.created_at).toISOString().split('T')[0];
-      return standupDate === this.selectedDate;
-    });
-  }
-
-
 }

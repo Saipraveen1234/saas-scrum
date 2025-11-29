@@ -5,8 +5,6 @@ import { FormsModule } from '@angular/forms';
 import { StandupService, Standup } from '../standup.service';
 import { AuthService } from '../auth.service';
 
-
-
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -14,17 +12,20 @@ import { AuthService } from '../auth.service';
   templateUrl: './dashboard.component.html',
 })
 export class DashboardComponent implements OnInit {
-  standups: Standup[] = [];
-  recentUpdates: Standup[] = [];
-  summary = '';
+  standupService = inject(StandupService);
+  authService = inject(AuthService);
+
+  standups: any[] = [];
+  recentUpdates: any[] = [];
+  summary: string = '';
   isLoading = false;
-  selectedDate: string = '';
-  userRole: 'admin' | 'employee' | null = null;
+  selectedDate: string = new Date().toISOString().split('T')[0];
+
   userTeam: string | null = null;
+  userRole: 'admin' | 'employee' | null = null;
 
   todayStats = {
     totalUpdates: 0,
-    teamMembers: 0,
     blockers: 0,
     completionRate: 100,
   };
@@ -34,7 +35,7 @@ export class DashboardComponent implements OnInit {
   burnupData: any[] = [];
   risk: any = null;
   velocityData: any[] = [];
-  
+
   // Chart Helpers
   maxBurnupPoints = 100;
   burnupPath = '';
@@ -44,17 +45,7 @@ export class DashboardComponent implements OnInit {
   aiTip = '';
   isTipLoading = false;
 
-  private standupService = inject(StandupService);
-  private authService = inject(AuthService);
-
   ngOnInit() {
-    this.authService.userRole$.subscribe(role => {
-      this.userRole = role;
-    });
-    this.authService.userTeam$.subscribe(team => {
-      this.userTeam = team;
-    });
-    this.setToday();
     this.loadData();
     this.loadTeamCount();
     this.loadSprintMetrics();
@@ -99,7 +90,7 @@ export class DashboardComponent implements OnInit {
       next: (res) => {
         this.velocityData = res;
         this.velocityMax = Math.max(...res.map((v: any) => v.points_completed), 10);
-        
+
         // Calculate change vs previous
         if (this.velocityData.length >= 2) {
           const current = this.velocityData[this.velocityData.length - 1].points_completed;
@@ -115,15 +106,15 @@ export class DashboardComponent implements OnInit {
 
   calculateBurnupPath() {
     if (!this.burnupData.length) return;
-    
+
     // Simple SVG path calculation
     // Assuming 100% width and height for the chart area
     // X axis: date (index), Y axis: points
-    
+
     const width = 100;
     const height = 100;
     this.maxBurnupPoints = Math.max(...this.burnupData.map(d => d.total_points), 100);
-    
+
     const points = this.burnupData.map((d, i) => {
       const x = (i / (this.burnupData.length - 1)) * width;
       const y = height - ((d.completed_points / this.maxBurnupPoints) * height);
@@ -182,8 +173,6 @@ export class DashboardComponent implements OnInit {
     const todayUpdates = this.recentUpdates;
     this.todayStats.totalUpdates = todayUpdates.length;
 
-    this.todayStats.totalUpdates = todayUpdates.length;
-
     this.todayStats.blockers = todayUpdates.filter(u => {
       if (!u.blockers) return false;
       const lower = u.blockers.trim().toLowerCase();
@@ -209,5 +198,9 @@ export class DashboardComponent implements OnInit {
         this.isLoading = false;
       },
     });
+  }
+
+  escalateBlocker(blocker: any) {
+    alert(`Escalated blocker: ${blocker.description}`);
   }
 }
