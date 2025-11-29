@@ -5,12 +5,12 @@ import { FormsModule } from '@angular/forms';
 import { StandupService, Standup } from '../standup.service';
 import { AuthService } from '../auth.service';
 
-import { MarkdownPipe } from '../pipes/markdown.pipe';
+
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, MarkdownPipe],
+  imports: [CommonModule, FormsModule],
   templateUrl: './dashboard.component.html',
 })
 export class DashboardComponent implements OnInit {
@@ -40,6 +40,9 @@ export class DashboardComponent implements OnInit {
   burnupPath = '';
   velocityMax = 0;
   velocityChange = 0;
+  
+  aiTip = '';
+  isTipLoading = false;
 
   private standupService = inject(StandupService);
   private authService = inject(AuthService);
@@ -55,6 +58,22 @@ export class DashboardComponent implements OnInit {
     this.loadData();
     this.loadTeamCount();
     this.loadSprintMetrics();
+
+    this.loadAiTip();
+  }
+
+  loadAiTip() {
+    this.isTipLoading = true;
+    this.standupService.sendChatMessage('Give me a short, inspiring agile tip for the team.').subscribe({
+      next: (res) => {
+        this.aiTip = res.response;
+        this.isTipLoading = false;
+      },
+      error: () => {
+        this.aiTip = 'Keep communication open and frequent!';
+        this.isTipLoading = false;
+      }
+    });
   }
 
   loadSprintMetrics() {

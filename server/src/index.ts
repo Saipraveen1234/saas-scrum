@@ -80,6 +80,53 @@ app.put("/api/tasks/:id/status", authMiddleware(dbClient), async (req: Request, 
   }
 });
 
+// 12. AI HELPERS
+app.post("/api/ai/generate-description", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    const { taskName, taskType } = req.body;
+    const prompt = `
+      You are an expert product manager. Write a detailed, professional description for a task named "${taskName}".
+      Task Type: ${taskType || 'General Development'}
+      
+      Include:
+      - Objective
+      - Key Requirements (bullet points)
+      - Acceptance Criteria (bullet points)
+      
+      Keep it concise but comprehensive. Use Markdown format.
+    `;
+    
+    const result = await model.generateContent(prompt);
+    res.json({ description: result.response.text() });
+  } catch (error) {
+    console.error("AI Description failed:", error);
+    res.status(500).json({ error: "Failed to generate description" });
+  }
+});
+
+app.post("/api/ai/estimate-time", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    const { taskName, description } = req.body;
+    const prompt = `
+      You are a senior software engineer. Estimate the time required to complete the following task:
+      Task: "${taskName}"
+      Description: "${description}"
+      
+      Provide a realistic time estimate in hours (e.g., "4 hours", "2 days").
+      Briefly explain the reasoning (1-2 sentences).
+      
+      Return ONLY a JSON object: { "estimate": "string", "reasoning": "string" }
+    `;
+    
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+    res.json(JSON.parse(text));
+  } catch (error) {
+    console.error("AI Estimation failed:", error);
+    res.status(500).json({ error: "Failed to estimate time" });
+  }
+});
+
 // 2. POST STANDUP
 app.post("/api/standups", authMiddleware(dbClient), async (req: Request, res: Response) => {
   try {
@@ -357,6 +404,22 @@ app.post("/api/summary", authMiddleware(dbClient), async (req: Request, res: Res
     console.error("AI Error:", error);
     res.status(500).json({ error: "AI generation failed" });
   }
+
+});
+
+// 3.1 POST TO SLACK
+app.post("/api/standups/slack", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    const { summary } = req.body;
+    // In a real app, we would use a Slack Webhook URL from env
+    // const slackUrl = process.env.SLACK_WEBHOOK_URL;
+    // await fetch(slackUrl, { method: 'POST', body: JSON.stringify({ text: summary }) });
+    
+    console.log("Posting to Slack:", summary);
+    res.json({ status: "Posted" });
+  } catch (error) {
+    res.status(500).json({ error: "Slack post failed" });
+  }
 });
 
 // 10. GET TASKS (ClickUp)
@@ -390,6 +453,148 @@ app.get("/api/tasks", authMiddleware(dbClient), async (req: Request, res: Respon
   } catch (error) {
     console.error("Fetch tasks failed:", error);
     res.status(500).json({ error: "Fetch tasks failed" });
+  }
+});
+
+// --- BACKLOG ROUTES ---
+
+// 17. GET BACKLOG
+app.get("/api/backlog", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    const listId = process.env.CLICKUP_LIST_ID;
+    if (!listId) return res.json([]);
+
+    const allTasks = await clickupService.getTasks(listId);
+    // Filter for backlog status
+    const backlogTasks = allTasks.filter((t: any) => t.status.status.toLowerCase() === 'backlog');
+    
+    res.json(backlogTasks);
+  } catch (error) {
+    console.error("Fetch backlog failed:", error);
+    res.status(500).json({ error: "Fetch backlog failed" });
+  }
+});
+
+// 18. ANALYZE BACKLOG ITEM (AI)
+app.post("/api/backlog/analyze", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    const { taskId, name, description } = req.body;
+    
+    const prompt = `
+      Analyze this backlog item for a Scrum team:
+      Title: "${name}"
+      Description: "${description}"
+      
+      Provide:
+      1. Clarity Score (0-10)
+      2. Suggestion (e.g., "Split this task", "Add acceptance criteria", "Ready for sprint")
+      3. Reasoning
+      
+      Return JSON: { "score": number, "suggestion": "string", "reasoning": "string" }
+    `;
+
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+    const analysis = JSON.parse(text);
+
+    // Save to DB
+    await dbClient.query(`
+      INSERT INTO task_ai_insights (task_id, suggestion_type, suggestion_text, status)
+      VALUES ($1, 'analysis', $2, 'pending')
+      ON CONFLICT (task_id, suggestion_type) 
+      DO UPDATE SET suggestion_text = $2, created_at = CURRENT_TIMESTAMP
+    `, [taskId, JSON.stringify(analysis)]);
+
+    res.json(analysis);
+  } catch (error) {
+    console.error("Backlog analysis failed:", error);
+    res.status(500).json({ error: "Analysis failed" });
+  }
+});
+
+// --- SPRINT PLANNING ROUTES ---
+
+// 19. GET PLANNING DATA
+app.get("/api/sprint/planning", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    const listId = process.env.CLICKUP_LIST_ID;
+    if (!listId) return res.json({ backlog: [], nextSprint: [] });
+
+    const allTasks = await clickupService.getTasks(listId);
+    
+    // Simple bucket logic: Backlog status vs Open/Pending status
+    const backlog = allTasks.filter((t: any) => t.status.status.toLowerCase() === 'backlog');
+    const nextSprint = allTasks.filter((t: any) => ['open', 'pending'].includes(t.status.status.toLowerCase()));
+
+    res.json({ backlog, nextSprint });
+  } catch (error) {
+    res.status(500).json({ error: "Fetch planning data failed" });
+  }
+});
+
+// 20. GENERATE SPRINT GOAL (AI)
+app.post("/api/sprint/goal", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    const { tasks } = req.body; // Array of task names/descriptions
+    
+    const prompt = `
+      Generate a concise, inspiring Sprint Goal based on these tasks selected for the next sprint:
+      ${tasks.map((t: any) => `- ${t.name}`).join('\n')}
+      
+      Return just the goal text.
+    `;
+
+    const result = await model.generateContent(prompt);
+    res.json({ goal: result.response.text() });
+  } catch (error) {
+    res.status(500).json({ error: "Goal generation failed" });
+  }
+});
+
+// 21. COMMIT SPRINT
+app.post("/api/sprint/commit", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    const { name, startDate, endDate, goal } = req.body;
+    
+    // Archive current active sprint if any
+    await dbClient.query("UPDATE sprints SET status = 'completed' WHERE status = 'active'");
+
+    // Create new sprint
+    const result = await dbClient.query(`
+      INSERT INTO sprints (name, start_date, end_date, status, goal)
+      VALUES ($1, $2, $3, 'active', $4)
+      RETURNING *
+    `, [name, startDate, endDate, goal]);
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: "Commit sprint failed" });
+  }
+});
+
+// --- REPORTS ROUTES ---
+
+// 22. RETRO ANALYSIS (AI)
+app.post("/api/reports/retro-analysis", authMiddleware(dbClient), async (req: Request, res: Response) => {
+  try {
+    const { items } = req.body; // Array of strings (feedback)
+    
+    const prompt = `
+      Analyze this retrospective feedback and group into themes.
+      Feedback:
+      ${items.join('\n')}
+      
+      Return JSON: { 
+        "themes": [{ "name": "string", "count": number, "summary": "string" }],
+        "sentiment": "positive" | "neutral" | "negative"
+      }
+    `;
+
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+    res.json(JSON.parse(text));
+  } catch (error) {
+    res.status(500).json({ error: "Retro analysis failed" });
   }
 });
 

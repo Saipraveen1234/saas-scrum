@@ -1,66 +1,92 @@
 <div class="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
   
   <!-- Left Sidebar -->
-  <aside *ngIf="!isLoginPage && (authService.currentUser$ | async)" class="w-64 bg-white border-r border-slate-200 flex-shrink-0 flex flex-col">
+    <!-- Left Sidebar -->
+  <aside *ngIf="!isLoginPage && (authService.currentUser$ | async)" 
+         class="bg-white border-r border-slate-200 flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out"
+         [ngClass]="{'w-64': !isSidebarCollapsed, 'w-20': isSidebarCollapsed}">
     <!-- Logo -->
-    <div class="p-6 flex items-center gap-3">
-      <img src="/logo.png" alt="Velos AI" class="h-12 w-auto">
+    <div class="p-6 flex items-center gap-3 h-20 overflow-hidden whitespace-nowrap">
+      <img *ngIf="!isSidebarCollapsed" src="/logo.png" alt="Velos AI" class="h-12 w-auto transition-opacity duration-300">
     </div>
 
     <!-- Nav Links -->
     <nav class="flex-1 px-4 space-y-2 mt-4">
       <a routerLink="/" routerLinkActive="bg-indigo-50 text-indigo-600" [routerLinkActiveOptions]="{ exact: true }"
-        class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all group">
-        <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all group overflow-hidden whitespace-nowrap"
+        [ngClass]="{'justify-center': isSidebarCollapsed}"
+        [title]="isSidebarCollapsed ? 'Dashboard' : ''">
+        <svg class="w-5 h-5 flex-shrink-0 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
         </svg>
-        <span class="font-medium">Dashboard</span>
+        <span class="font-medium transition-opacity duration-200" [class.opacity-0]="isSidebarCollapsed" [class.w-0]="isSidebarCollapsed" [class.hidden]="isSidebarCollapsed">Dashboard</span>
+      </a>
+
+      <a routerLink="/standups" routerLinkActive="bg-indigo-50 text-indigo-600"
+        class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all group overflow-hidden whitespace-nowrap"
+        [ngClass]="{'justify-center': isSidebarCollapsed}"
+        [title]="isSidebarCollapsed ? 'Standups' : ''">
+        <svg class="w-5 h-5 flex-shrink-0 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+        <span class="font-medium transition-opacity duration-200" [class.opacity-0]="isSidebarCollapsed" [class.w-0]="isSidebarCollapsed" [class.hidden]="isSidebarCollapsed">Standups</span>
+      </a>
+
+      <a routerLink="/tasks" routerLinkActive="bg-indigo-50 text-indigo-600"
+        class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all group overflow-hidden whitespace-nowrap"
+        [ngClass]="{'justify-center': isSidebarCollapsed}"
+        [title]="isSidebarCollapsed ? 'Tasks' : ''">
+        <svg class="w-5 h-5 flex-shrink-0 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        </svg>
+        <span class="font-medium transition-opacity duration-200" [class.opacity-0]="isSidebarCollapsed" [class.w-0]="isSidebarCollapsed" [class.hidden]="isSidebarCollapsed">Tasks</span>
       </a>
 
       <a routerLink="/backlog" routerLinkActive="bg-indigo-50 text-indigo-600"
-        class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all group">
-        <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all group overflow-hidden whitespace-nowrap"
+        [ngClass]="{'justify-center': isSidebarCollapsed}"
+        [title]="isSidebarCollapsed ? 'Backlog' : ''">
+        <svg class="w-5 h-5 flex-shrink-0 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
         </svg>
-        <span class="font-medium">Sprint Board</span>
+        <span class="font-medium transition-opacity duration-200" [class.opacity-0]="isSidebarCollapsed" [class.w-0]="isSidebarCollapsed" [class.hidden]="isSidebarCollapsed">Backlog</span>
       </a>
 
-      <a routerLink="/feed" routerLinkActive="bg-indigo-50 text-indigo-600"
-        class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all group">
-        <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+      <a routerLink="/planning" routerLinkActive="bg-indigo-50 text-indigo-600"
+        class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all group overflow-hidden whitespace-nowrap"
+        [ngClass]="{'justify-center': isSidebarCollapsed}"
+        [title]="isSidebarCollapsed ? 'Sprint Planning' : ''">
+        <svg class="w-5 h-5 flex-shrink-0 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
-        <span class="font-medium">Feed</span>
+        <span class="font-medium transition-opacity duration-200" [class.opacity-0]="isSidebarCollapsed" [class.w-0]="isSidebarCollapsed" [class.hidden]="isSidebarCollapsed">Sprint Planning</span>
       </a>
 
-      <a routerLink="/post" routerLinkActive="bg-indigo-50 text-indigo-600"
-        class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all group">
-        <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+      <a routerLink="/reports" routerLinkActive="bg-indigo-50 text-indigo-600"
+        class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all group overflow-hidden whitespace-nowrap"
+        [ngClass]="{'justify-center': isSidebarCollapsed}"
+        [title]="isSidebarCollapsed ? 'Reports' : ''">
+        <svg class="w-5 h-5 flex-shrink-0 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
-        <span class="font-medium">Post Update</span>
-      </a>
-
-      <!-- Tasks -->
-      <a routerLink="/tasks" routerLinkActive="bg-indigo-50 text-indigo-600"
-        class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all group">
-        <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-        <span class="font-medium">Tasks</span>
+        <span class="font-medium transition-opacity duration-200" [class.opacity-0]="isSidebarCollapsed" [class.w-0]="isSidebarCollapsed" [class.hidden]="isSidebarCollapsed">Reports</span>
       </a>
 
       <!-- Manage Teams (Admin) -->
       <a *ngIf="(authService.userRole$ | async) === 'admin'" routerLink="/teams" routerLinkActive="bg-indigo-50 text-indigo-600"
-        class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all group">
-        <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all group overflow-hidden whitespace-nowrap"
+        [ngClass]="{'justify-center': isSidebarCollapsed}"
+        [title]="isSidebarCollapsed ? 'Manage Teams' : ''">
+        <svg class="w-5 h-5 flex-shrink-0 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
-        <span class="font-medium">Manage Teams</span>
+        <span class="font-medium transition-opacity duration-200" [class.opacity-0]="isSidebarCollapsed" [class.w-0]="isSidebarCollapsed" [class.hidden]="isSidebarCollapsed">Manage Teams</span>
       </a>
     </nav>
 
-    <!-- User Profile (Bottom) -->
+    <!-- Logo (Bottom) -->
+
+
     <!-- <div class="p-4 border-t border-slate-200">
       <button (click)="authService.signOut()" class="flex items-center gap-3 w-full px-4 py-2 rounded-lg hover:bg-red-50 text-slate-600 hover:text-red-600 transition-colors">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -76,10 +102,23 @@
     <!-- Top Header -->
     <header *ngIf="!isLoginPage" class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 flex-shrink-0">
       <div class="flex items-center gap-4">
-        <h1 class="text-xl font-semibold text-slate-800">Dashboard</h1>
+        <button (click)="toggleSidebar()" class="p-2 text-slate-400 hover:text-slate-600 transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <img *ngIf="isSidebarCollapsed" src="/logo.png" alt="Velos AI" class="h-10 w-auto transition-opacity duration-300">
+        <h1 class="text-xl font-semibold text-slate-800" *ngIf="!isSidebarCollapsed">Dashboard</h1>
       </div>
       
       <div class="flex items-center gap-4 relative">
+        <button (click)="toggleChat()" class="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          <span class="font-medium text-sm">Ask AI Coach</span>
+        </button>
+
         <button class="p-2 text-slate-400 hover:text-slate-600 transition-colors">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -109,46 +148,58 @@
     </div>
   </main>
 
-  <!-- Right Sidebar (AI Assistant) -->
-  <aside *ngIf="!isLoginPage && (authService.currentUser$ | async)" class="w-80 bg-slate-900 text-white flex-shrink-0 flex flex-col border-l border-slate-800">
-    <div class="p-6 border-b border-slate-800">
-      <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center">
-          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-        </div>
-        <span class="font-semibold">AI Scrum Assistant</span>
-      </div>
-    </div>
+  <!-- AI Assistant Chat Window (Fixed) -->
+  <div *ngIf="!isLoginPage && (authService.currentUser$ | async) && isChatOpen" class="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4">
     
-    <div class="flex-1 p-6 overflow-y-auto space-y-6">
-      <div *ngFor="let msg of chatMessages" 
-           [ngClass]="{'bg-indigo-600 text-white ml-auto': msg.isUser, 'bg-slate-800/50 text-slate-300': !msg.isUser}"
-           class="rounded-lg p-4 text-sm max-w-[85%] break-words whitespace-pre-wrap">
-        {{ msg.text }}
-      </div>
-      
-      <div *ngIf="isChatLoading" class="bg-slate-800/50 rounded-lg p-4 text-sm text-slate-300 w-fit">
-        <div class="flex gap-1">
-          <div class="w-2 h-2 bg-slate-500 rounded-full animate-bounce"></div>
-          <div class="w-2 h-2 bg-slate-500 rounded-full animate-bounce delay-75"></div>
-          <div class="w-2 h-2 bg-slate-500 rounded-full animate-bounce delay-150"></div>
+    <!-- Chat Window -->
+    <div class="w-96 h-[32rem] bg-slate-900 text-white rounded-2xl shadow-2xl flex flex-col border border-slate-700 overflow-hidden transition-all origin-bottom-right animate-fade-in-up">
+      <!-- Header -->
+      <div class="p-4 border-b border-slate-800 bg-slate-900 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <span class="font-semibold">AI Scrum Assistant</span>
         </div>
-      </div>
-    </div>
-
-    <div class="p-4 border-t border-slate-800">
-      <div class="relative">
-        <input type="text" [(ngModel)]="userInput" (keydown.enter)="sendMessage()" placeholder="Ask AI..." 
-               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
-        <button (click)="sendMessage()" class="absolute right-2 top-2 text-slate-400 hover:text-white">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+        <button (click)="toggleChat()" class="text-slate-400 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
+      
+      <!-- Messages -->
+      <div class="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-900">
+        <div *ngFor="let msg of chatMessages" 
+             [ngClass]="{'bg-indigo-600 text-white ml-auto': msg.isUser, 'bg-slate-800 text-slate-300': !msg.isUser}"
+             class="rounded-2xl px-4 py-2 text-sm max-w-[85%] break-words whitespace-pre-wrap shadow-sm">
+          {{ msg.text }}
+        </div>
+        
+        <div *ngIf="isChatLoading" class="bg-slate-800 rounded-2xl px-4 py-2 text-sm text-slate-300 w-fit">
+          <div class="flex gap-1">
+            <div class="w-2 h-2 bg-slate-500 rounded-full animate-bounce"></div>
+            <div class="w-2 h-2 bg-slate-500 rounded-full animate-bounce delay-75"></div>
+            <div class="w-2 h-2 bg-slate-500 rounded-full animate-bounce delay-150"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input -->
+      <div class="p-4 border-t border-slate-800 bg-slate-900">
+        <div class="relative">
+          <input type="text" [(ngModel)]="userInput" (keydown.enter)="sendMessage()" placeholder="Ask AI..." 
+                 class="w-full bg-slate-800 border border-slate-700 rounded-full px-4 py-3 pr-10 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all">
+          <button (click)="sendMessage()" class="absolute right-2 top-2 p-1 text-slate-400 hover:text-indigo-400 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
-  </aside>
+  </div>
 
 </div>
