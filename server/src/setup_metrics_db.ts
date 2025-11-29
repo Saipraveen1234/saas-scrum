@@ -72,6 +72,32 @@ async function setupMetricsDB() {
     `);
     console.log("Checked/Created 'velocity_history' table.");
 
+    // 5. Task AI Insights (for Backlog)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS task_ai_insights (
+        id SERIAL PRIMARY KEY,
+        task_id VARCHAR(255) NOT NULL, -- ClickUp Task ID
+        suggestion_type VARCHAR(50), -- warning, split, improvement
+        suggestion_text TEXT,
+        status VARCHAR(50) DEFAULT 'pending', -- pending, accepted, rejected
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(task_id, suggestion_type)
+      );
+    `);
+    console.log("Checked/Created 'task_ai_insights' table.");
+
+    // 6. Retro Items
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS retro_items (
+        id SERIAL PRIMARY KEY,
+        sprint_id INTEGER REFERENCES sprints(id),
+        type VARCHAR(50), -- went_well, needs_improvement, action_item
+        content TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log("Checked/Created 'retro_items' table.");
+
     // Seed some initial data if empty
     const sprintsCheck = await client.query("SELECT COUNT(*) FROM sprints");
     if (parseInt(sprintsCheck.rows[0].count) === 0) {

@@ -21,11 +21,21 @@ export class AppComponent {
   userInput = '';
   isChatLoading = false;
   isProfileMenuOpen = false;
+  isChatOpen = false;
+  isSidebarCollapsed = false;
 
   constructor(public authService: AuthService, public router: Router) {}
 
+  toggleSidebar() {
+    this.isSidebarCollapsed = !this.isSidebarCollapsed;
+  }
+
   toggleProfileMenu() {
     this.isProfileMenuOpen = !this.isProfileMenuOpen;
+  }
+
+  toggleChat() {
+    this.isChatOpen = !this.isChatOpen;
   }
 
   get isLoginPage(): boolean {

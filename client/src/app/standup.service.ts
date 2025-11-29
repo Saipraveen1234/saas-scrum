@@ -56,13 +56,15 @@ export class StandupService {
 
   // 4. Get Backlog (ClickUp)
   getBacklog(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/backlog`);
+    return from(this.authService.getToken()).pipe(
+      switchMap(token => {
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+        return this.http.get<any[]>(`${this.apiUrl}/backlog`, { headers });
+      })
+    );
   }
 
-  // 5. Groom Task (AI)
-  groomTask(task: any): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/groom`, { task });
-  }
+
 
   // 6. Get Team Count
   getTeamCount(): Observable<{ count: number }> {
@@ -90,6 +92,24 @@ export class StandupService {
       switchMap(token => {
         const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
         return this.http.put<any>(`${this.apiUrl}/tasks/${taskId}/status`, { status }, { headers });
+      })
+    );
+  }
+
+  generateDescription(taskName: string, taskType: string): Observable<{ description: string }> {
+    return from(this.authService.getToken()).pipe(
+      switchMap(token => {
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+        return this.http.post<{ description: string }>(`${this.apiUrl}/ai/generate-description`, { taskName, taskType }, { headers });
+      })
+    );
+  }
+
+  estimateTime(taskName: string, description: string): Observable<{ estimate: string, reasoning: string }> {
+    return from(this.authService.getToken()).pipe(
+      switchMap(token => {
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+        return this.http.post<{ estimate: string, reasoning: string }>(`${this.apiUrl}/ai/estimate-time`, { taskName, description }, { headers });
       })
     );
   }
@@ -147,6 +167,65 @@ export class StandupService {
       switchMap(token => {
         const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
         return this.http.post<{ response: string }>(`${this.apiUrl}/chat`, { message }, { headers });
+      })
+    );
+  }
+  // 9. Analyze Backlog Item (AI)
+  analyzeBacklogItem(taskId: string, name: string, description: string): Observable<any> {
+    return from(this.authService.getToken()).pipe(
+      switchMap(token => {
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+        return this.http.post<any>(`${this.apiUrl}/backlog/analyze`, { taskId, name, description }, { headers });
+      })
+    );
+  }
+
+  // 10. Get Sprint Planning Data
+  getSprintPlanningData(): Observable<{ backlog: any[], nextSprint: any[] }> {
+    return from(this.authService.getToken()).pipe(
+      switchMap(token => {
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+        return this.http.get<{ backlog: any[], nextSprint: any[] }>(`${this.apiUrl}/sprint/planning`, { headers });
+      })
+    );
+  }
+
+  // 11. Generate Sprint Goal (AI)
+  generateSprintGoal(tasks: any[]): Observable<{ goal: string }> {
+    return from(this.authService.getToken()).pipe(
+      switchMap(token => {
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+        return this.http.post<{ goal: string }>(`${this.apiUrl}/sprint/goal`, { tasks }, { headers });
+      })
+    );
+  }
+
+  // 12. Commit Sprint
+  commitSprint(data: any): Observable<any> {
+    return from(this.authService.getToken()).pipe(
+      switchMap(token => {
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+        return this.http.post<any>(`${this.apiUrl}/sprint/commit`, data, { headers });
+      })
+    );
+  }
+
+  // 13. Analyze Retro (AI)
+  analyzeRetro(items: string[]): Observable<any> {
+    return from(this.authService.getToken()).pipe(
+      switchMap(token => {
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+        return this.http.post<any>(`${this.apiUrl}/reports/retro-analysis`, { items }, { headers });
+      })
+    );
+  }
+
+  // 14. Post to Slack
+  postToSlack(summary: string): Observable<any> {
+    return from(this.authService.getToken()).pipe(
+      switchMap(token => {
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+        return this.http.post<any>(`${this.apiUrl}/standups/slack`, { summary }, { headers });
       })
     );
   }
